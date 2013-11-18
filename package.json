@@ -1,0 +1,23 @@
+{
+  "name": "dynamic-tournament",
+  "description": "A dynamic tournament base class for tournaments that modify matches",
+  "author": "Eirik Albrigtsen <analsandblaster@gmail.com>",
+  "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "clux/dynamic-tournament"
+  },
+  "keywords": [],
+  "main": "dynamic.js",
+  "scripts": {
+    "test": "tap test/*.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "tap": "~0.4.4"
+  },
+  "bugs": {
+    "url": "http://github.com/clux/dynamic-tournament/issues"
+  },
+  "license": "MIT"
+}

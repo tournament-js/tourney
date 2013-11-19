@@ -1,4 +1,4 @@
-var Base = require('./');
+var $ = require('interlude');
 
 var stageAttach = function (ms, stage) {
   ms.forEach(function (m) {
@@ -22,7 +22,6 @@ Dynamic.inherit = function (Klass, Initial) {
   Klass.prototype = Object.create(Initial.prototype);
 
   // TODO: defaults for _verify _progress _limbo _early and _initResult ?
-  Klass.idString = Initial.idString;
   Object.defineProperty(Klass.prototype, 'rep', {
     value: Klass.idString
   });
@@ -35,7 +34,12 @@ Dynamic.inherit = function (Klass, Initial) {
   // TODO: sub?
 };
 
-Dynamic.prototype.endStage = function () {
+// TODO: getter?
+Dynamic.prototype.currentStage = function () {
+  return this._trn.matches;
+};
+
+Dynamic.prototype.createNextStage = function () {
   if (!this._ready) {
     throw new Error("cannot start next stage until current one is done");
   }
@@ -53,13 +57,13 @@ Dynamic.prototype.endStage = function () {
   }.bind(this));
 
   this._stage += 1;
-  this._trn = this._nextStage();
+  this._trn = this._createNext();
   stageAttach(this._trn.matches, this._stage);
   this.matches = this.matches.concat(this._trn.matches);
   this._ready = false;
 };
 
-Dynamic.prototype.stageDone = function () {
+Dynamic.prototype.stageComplete = function () {
   return this._ready;
 };
 
@@ -89,14 +93,33 @@ Dynamic.prototype.score = function (id, score, allowPast) {
 };
 
 Dynamic.prototype.upcoming = function (playerId) {
-  var id = this._trn.upcoming();
-  if (!id) {
-    // TODO: could predict across stage borders (broadly) if results[i].pos <= adv
-    // though expensive for just this.. TODO: cache results?
-  }
-  if (id) {
-    return $.extend({ t: this._stage }, id);
-  }
+  // NB: this returns id without .t - probably sensible?
+  return this._trn.upcoming(playerId);
 };
 
 // TODO: isDone
+
+var resultEntry = function (res, p) {
+  return $.firstBy(function (r) {
+    return r.seed === p;
+  }, res);
+};
+
+Dynamic.prototype.results = function () {
+  var oldRes = this._oldRes || {};
+  var currRes = this._trn.results();
+
+  oldRes.forEach(function (r) {
+    if (!resultEntry(currRes, r.seed)) {
+      // copy over result entries for previous stages - because we eliminate
+      // between stages, difference will be the player knocked out:
+      // thes, since oldRes is sorted, so is currRes after pushing
+      currRes.push(r);
+    }
+  });
+
+  this._oldRes = currRes;
+  return currRes;
+};
+
+module.exports = Dynamic;

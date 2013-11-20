@@ -11,6 +11,7 @@ var stageAttach = function (ms, stage) {
 function Dynamic(trn) {
   this._trn = trn;
   this._ready = false;
+  this._done = false;
   this._stage = 1;
   stageAttach(trn.matches, this._stage);
   this.numPlayers = trn.numPlayers; // TODO: initial always good starting point?
@@ -56,11 +57,16 @@ Dynamic.prototype.createNextStage = function () {
     this.matches.push(copy);
   }.bind(this));
 
+  var trn = this._createNext(/*this._stage += 1*/);
+  if (trn === null) {
+    return false;
+  }
   this._stage += 1;
-  this._trn = this._createNext();
+  this._trn = trn;
   stageAttach(this._trn.matches, this._stage);
   this.matches = this.matches.concat(this._trn.matches);
   this._ready = false;
+  return true;
 };
 
 Dynamic.prototype.stageComplete = function () {
@@ -97,7 +103,9 @@ Dynamic.prototype.upcoming = function (playerId) {
   return this._trn.upcoming(playerId);
 };
 
-// TODO: isDone
+Dynamic.prototype.isDone = function () {
+  return this._done;
+};
 
 var resultEntry = function (res, p) {
   return $.firstBy(function (r) {

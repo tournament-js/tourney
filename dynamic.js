@@ -57,7 +57,7 @@ Dynamic.prototype.createNextStage = function () {
     this.matches.push(copy);
   }.bind(this));
 
-  var trn = this._createNext(/*this._stage += 1*/);
+  var trn = this._createNext(/*this._stage*/);
   if (trn === null) {
     return false;
   }

@@ -1,4 +1,4 @@
-var $ = require('interlude');
+var $ = require('autonomy');
 
 var stageAttach = function (ms, stage) {
   ms.forEach(function (m) {

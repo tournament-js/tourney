@@ -40,6 +40,10 @@ Dynamic.prototype.currentStage = function () {
   return this._trn.matches;
 };
 
+Dynamic.prototype.currentPlayers = function (partialId) {
+  return this._trn.players(partialId);
+};
+
 Dynamic.prototype.createNextStage = function () {
   if (!this._ready) {
     throw new Error("cannot start next stage until current one is done");
@@ -90,8 +94,6 @@ Dynamic.prototype.score = function (id, score, allowPast) {
   }
   // score in current tournament - we know _trn.unscorable passes at this point
   if (this._trn.score(id, score, allowPast)) {
-    // copy score to global match list
-    //this.findMatch($.extend({ t: this._stage }, id)).m = score;
     this._ready = this._trn.isDone();
     return true;
   }
@@ -99,8 +101,7 @@ Dynamic.prototype.score = function (id, score, allowPast) {
 };
 
 Dynamic.prototype.upcoming = function (playerId) {
-  // NB: this returns id without .t - probably sensible?
-  return this._trn.upcoming(playerId);
+  return $.extend({ t: this._stage }, this._trn.upcoming(playerId));
 };
 
 Dynamic.prototype.isDone = function () {

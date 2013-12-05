@@ -2,7 +2,7 @@
   "name": "tourney",
   "description": "Base class for a tournament of tournaments",
   "author": "Eirik Albrigtsen <analsandblaster@gmail.com>",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "repository": {
     "type": "git",
     "url": "clux/tourney"

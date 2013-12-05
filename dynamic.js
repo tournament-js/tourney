@@ -6,13 +6,13 @@ var stageAttach = function (ms, stage) {
   });
 };
 
-// signature => Ctor usage as in ffadynamic.js
 // TODO: find sensible start signatures so we can implement .sub
 function Dynamic(trn) {
   this._trn = trn;
   this._ready = false;
   this._done = false;
   this._stage = 1;
+  this._oldRes = [];
   stageAttach(trn.matches, this._stage);
   this.numPlayers = trn.numPlayers; // TODO: initial always good starting point?
   this.matches = trn.matches.slice();
@@ -48,6 +48,10 @@ Dynamic.prototype.createNextStage = function () {
   if (!this._ready) {
     throw new Error("cannot start next stage until current one is done");
   }
+
+  // update oldRes at end of each stage
+  // NB: this.results() has more info than this._trn.results()
+  this._oldRes = this.results();
 
   // copy finished rounds matches into big list under a stage guarded ID
   this._trn.matches.forEach(function (m) {
@@ -115,20 +119,14 @@ var resultEntry = function (res, p) {
 };
 
 Dynamic.prototype.results = function () {
-  var oldRes = this._oldRes || {};
   var currRes = this._trn.results();
-
-  oldRes.forEach(function (r) {
-    if (!resultEntry(currRes, r.seed)) {
-      // copy over result entries for previous stages - because we eliminate
-      // between stages, difference will be the player knocked out:
-      // thes, since oldRes is sorted, so is currRes after pushing
-      currRes.push(r);
-    }
+  // _oldRes maintained as results from previous stage(s)
+  var knockedOutResults = this._oldRes.filter(function (r) {
+    // players not in current stage exist in previous results below
+    return !resultEntry(currRes, r.seed);
   });
 
-  this._oldRes = currRes;
-  return currRes;
+  return currRes.concat(knockedOutResults);
 };
 
 module.exports = Dynamic;

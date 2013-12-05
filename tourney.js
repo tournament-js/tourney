@@ -7,7 +7,7 @@ var stageAttach = function (ms, stage) {
 };
 
 // TODO: find sensible start signatures so we can implement .sub
-function Dynamic(trn) {
+function Tourney(trn) {
   this._trn = trn;
   this._ready = false;
   this._done = false;
@@ -18,8 +18,8 @@ function Dynamic(trn) {
   this.matches = trn.matches.slice();
 }
 
-Dynamic.inherit = function (Klass, Initial) {
-  Initial = Initial || Dynamic;
+Tourney.inherit = function (Klass, Initial) {
+  Initial = Initial || Tourney;
   Klass.prototype = Object.create(Initial.prototype);
 
   // TODO: defaults for _verify _progress _limbo _early and _initResult ?
@@ -36,15 +36,15 @@ Dynamic.inherit = function (Klass, Initial) {
 };
 
 // TODO: getter?
-Dynamic.prototype.currentStage = function () {
+Tourney.prototype.currentStage = function () {
   return this._trn.matches;
 };
 
-Dynamic.prototype.currentPlayers = function (partialId) {
+Tourney.prototype.currentPlayers = function (partialId) {
   return this._trn.players(partialId);
 };
 
-Dynamic.prototype.createNextStage = function () {
+Tourney.prototype.createNextStage = function () {
   if (!this._ready) {
     throw new Error("cannot start next stage until current one is done");
   }
@@ -77,11 +77,11 @@ Dynamic.prototype.createNextStage = function () {
   return true;
 };
 
-Dynamic.prototype.stageComplete = function () {
+Tourney.prototype.stageComplete = function () {
   return this._ready;
 };
 
-Dynamic.prototype.unscorable = function (id, score, allowPast) {
+Tourney.prototype.unscorable = function (id, score, allowPast) {
   if (id.t != null && id.t !== this._stage) {
     return "cannot rescore finished stages";
   }
@@ -89,7 +89,7 @@ Dynamic.prototype.unscorable = function (id, score, allowPast) {
   return this._trn.unscorable(id, score, allowPast);
 };
 
-Dynamic.prototype.score = function (id, score, allowPast) {
+Tourney.prototype.score = function (id, score, allowPast) {
   var invReason = this.unscorable(id, score, true);
   if (invReason !== null) {
     console.error("failed scoring match %s with %j", this.rep(id), score);
@@ -104,11 +104,11 @@ Dynamic.prototype.score = function (id, score, allowPast) {
   return false;
 };
 
-Dynamic.prototype.upcoming = function (playerId) {
+Tourney.prototype.upcoming = function (playerId) {
   return $.extend({ t: this._stage }, this._trn.upcoming(playerId));
 };
 
-Dynamic.prototype.isDone = function () {
+Tourney.prototype.isDone = function () {
   return this._done;
 };
 
@@ -118,7 +118,7 @@ var resultEntry = function (res, p) {
   }, res);
 };
 
-Dynamic.prototype.results = function () {
+Tourney.prototype.results = function () {
   var currRes = this._trn.results();
   // _oldRes maintained as results from previous stage(s)
   var knockedOutResults = this._oldRes.filter(function (r) {
@@ -129,4 +129,4 @@ Dynamic.prototype.results = function () {
   return currRes.concat(knockedOutResults);
 };
 
-module.exports = Dynamic;
+module.exports = Tourney;

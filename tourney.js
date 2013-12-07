@@ -35,6 +35,9 @@ Tourney.inherit = function (Klass, Initial) {
   // TODO: sub?
 };
 
+// Tourney::from and Tourney::_replace are identical to Tournaments..
+
+
 // TODO: getter?
 Tourney.prototype.currentStage = function () {
   return this._trn.matches;

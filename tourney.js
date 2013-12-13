@@ -1,21 +1,30 @@
 var $ = require('autonomy');
 
-var stageAttach = function (ms, stage) {
-  ms.forEach(function (m) {
-    m.id.t = stage;
-  });
+var prepTournaments = function (trns, stage) {
+  var currentStage = [];
+  for (var i = 0; i < trns.length; i += 1) {
+    var ms = trns[i].matches;
+    for (var k = 0; k < ms.length; k += 1) {
+      var m = ms[k];
+      m.id.t = stage; // sub tournament
+      m.id.p = i+1; // parallel segment
+      currentStage.push(m);
+    }
+  }
+  return currentStage;
 };
 
 // TODO: find sensible start signatures so we can implement .sub
-function Tourney(trn) {
-  this._trn = trn;
+function Tourney(trns) {
+  this._trns = trns;
   this._ready = false;
   this._done = false;
   this._stage = 1;
   this._oldRes = [];
-  stageAttach(trn.matches, this._stage);
-  this.numPlayers = trn.numPlayers; // TODO: initial always good starting point?
-  this.matches = trn.matches.slice();
+  this.matches = prepTournaments(trns, this._stage);
+  this.numPlayers = trns.reduce(function (acc, trn) {
+    return acc + trn.numPlayers;
+  }, 0);
 }
 
 Tourney.inherit = function (Klass, Initial) {
@@ -40,7 +49,7 @@ Tourney.inherit = function (Klass, Initial) {
 
 // TODO: getter?
 Tourney.prototype.currentStage = function () {
-  return this._trn.matches;
+  return this._trns[0].matches;
 };
 
 Tourney.prototype.currentPlayers = function (partialId) {
@@ -57,25 +66,30 @@ Tourney.prototype.createNextStage = function () {
   this._oldRes = this.results();
 
   // copy finished rounds matches into big list under a stage guarded ID
-  this._trn.matches.forEach(function (m) {
-    var copy = {
-      id: $.extend({ t: this.stage }, m.id),
-      p: m.p.slice()
-    };
-    if (m.m) {
-      copy.m = m.m.slice();
+  for (var i = 0; i < this._trns.length; i += 1) {
+    var trn = this._trns[i];
+    for (var k = 0; k < trn.matches.length; k += 1) {
+      var m = trn.matches[k];
+      var copy = {
+        id: $.extend({ t: this.stage, p: i+1 }, m.id),
+        p: m.p.slice()
+      };
+      if (m.m) {
+        copy.m = m.m.slice();
+      }
+      this.matches.push(copy);
     }
-    this.matches.push(copy);
-  }.bind(this));
+  }
 
-  var trn = this._createNext(/*this._stage*/);
-  if (trn === null) {
+  var trns = this._createNext(/*this._stage*/);
+  if (!trns.length) {
+    this._done = true;
     return false;
   }
   this._stage += 1;
-  this._trn = trn;
-  stageAttach(this._trn.matches, this._stage);
-  this.matches = this.matches.concat(this._trn.matches);
+  this._trns = trns;
+  var newMatches = prepTournaments(trns, this._stage);
+  this.matches = this.matches.concat(newMatches);
   this._ready = false;
   return true;
 };
@@ -89,7 +103,7 @@ Tourney.prototype.unscorable = function (id, score, allowPast) {
     return "cannot rescore finished stages";
   }
   // Note that classical tournaments just disregard the id.t flag
-  return this._trn.unscorable(id, score, allowPast);
+  return this._trns[0].unscorable(id, score, allowPast);
 };
 
 Tourney.prototype.score = function (id, score, allowPast) {
@@ -100,15 +114,16 @@ Tourney.prototype.score = function (id, score, allowPast) {
     return false;
   }
   // score in current tournament - we know _trn.unscorable passes at this point
-  if (this._trn.score(id, score, allowPast)) {
-    this._ready = this._trn.isDone();
+  // TODO: score parallel
+  if (this._trns[0].score(id, score, allowPast)) {
+    this._ready = this._trns[0].isDone();
     return true;
   }
   return false;
 };
 
 Tourney.prototype.upcoming = function (playerId) {
-  return $.extend({ t: this._stage }, this._trn.upcoming(playerId));
+  return $.extend({ t: this._stage }, this._trns[0].upcoming(playerId));
 };
 
 Tourney.prototype.isDone = function () {
@@ -122,7 +137,7 @@ var resultEntry = function (res, p) {
 };
 
 Tourney.prototype.results = function () {
-  var currRes = this._trn.results();
+  var currRes = this._trns[0].results();
   // _oldRes maintained as results from previous stage(s)
   var knockedOutResults = this._oldRes.filter(function (r) {
     // players not in current stage exist in previous results below

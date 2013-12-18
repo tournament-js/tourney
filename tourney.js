@@ -14,15 +14,40 @@ var prepTournaments = function (trns, stage) {
   return currentStage;
 };
 
-// TODO: find sensible start signatures so we can implement .sub
+var invalid = function (trns) {
+  if (!Array.isArray(trns) || !trns.length) {
+    return "Cannot create tourney without a starting stage";
+  }
+  for (var i = 0; i < trns.length; i += 1) {
+    var trn = trns[i];
+    // NB: Want to check (trn instanceof Tournament), but this won't work if
+    // the required version of tournament is slightly different - thus fuzzy check
+    if (Object(trn) !== trn) {
+      return "Stage 1 tourney " + i + " isn't a Tournament";
+    }
+    if (!Array.isArray(trn.matches)) {
+      return "Stage 1 tourney " + i + " does not have matches";
+    }
+    if (!trn.numPlayers) {
+      return "Stage 1 tourney " + i + " does not have positive numPlayers";
+    }
+  }
+  return null;
+};
+
 function Tourney(trns) {
+  var invReason = invalid(trns);
+  if (invReason !== null) {
+    throw new Error(invReason);
+  }
   this._trns = trns;
   this._ready = false;
   this._done = false;
   this._stage = 1;
   this._oldRes = [];
   this.matches = prepTournaments(trns, this._stage);
-  this.numPlayers = trns.reduce(function (acc, trn) {
+
+  this.numPlayers = this._trns.reduce(function (acc, trn) {
     return acc + trn.numPlayers;
   }, 0);
 }
@@ -32,29 +57,24 @@ Tourney.inherit = function (Klass, Initial) {
   Klass.prototype = Object.create(Initial.prototype);
 
   // TODO: defaults for _verify _progress _limbo _early and _initResult ?
-  Object.defineProperty(Klass.prototype, 'rep', {
-    value: Klass.idString
-  });
+  Klass.prototype.rep = Klass.idString;
 
-  // TODO: configure?
   Klass.inherit = function (SubKlass) {
     return Initial.inherit(SubKlass, Klass);
   };
-
-  // TODO: sub?
 };
 
 // Tourney::from and Tourney::_replace are identical to Tournaments..
 
 
 // TODO: getter?
-Tourney.prototype.currentStage = function () {
-  return this._trns[0].matches;
+Tourney.prototype.currentStage = function (p) {
+  return this._trns[(p - 1) || 0].matches;
 };
 
-Tourney.prototype.currentPlayers = function (partialId) {
-  return this._trn.players(partialId);
-};
+//Tourney.prototype.currentPlayers = function (partialId) {
+//  return this._trn.players(partialId);
+//};
 
 Tourney.prototype.createNextStage = function () {
   if (!this._ready) {
@@ -102,8 +122,12 @@ Tourney.prototype.unscorable = function (id, score, allowPast) {
   if (id.t != null && id.t !== this._stage) {
     return "cannot rescore finished stages";
   }
+  var p = (id.p - 1) || 0
+  if (p != null && p >= this._trns.length) {
+    return "invalid parallel stage number";
+  }
   // Note that classical tournaments just disregard the id.t flag
-  return this._trns[0].unscorable(id, score, allowPast);
+  return this._trns[p].unscorable(id, score, allowPast);
 };
 
 Tourney.prototype.score = function (id, score, allowPast) {
@@ -114,15 +138,27 @@ Tourney.prototype.score = function (id, score, allowPast) {
     return false;
   }
   // score in current tournament - we know _trn.unscorable passes at this point
-  // TODO: score parallel
-  if (this._trns[0].score(id, score, allowPast)) {
-    this._ready = this._trns[0].isDone();
+  var p = (id.p - 1) || 0;
+  if (this._trns[p].score(id, score, allowPast)) {
+
+    this._ready = this._trns.reduce(function (acc, trn) {
+      return acc && trn.isDone();
+    }, true);
+
     return true;
   }
   return false;
 };
 
+Tourney.prototype._parallelGuard = function (name) {
+  if (this._trns.length > 1) {
+    var str = "No default " + name + " implementation for parallel stages exist";
+    throw new Error(str);
+  }
+};
+
 Tourney.prototype.upcoming = function (playerId) {
+  this._parallelGuard('Tourney::upcoming');
   return $.extend({ t: this._stage }, this._trns[0].upcoming(playerId));
 };
 
@@ -136,7 +172,15 @@ var resultEntry = function (res, p) {
   }, res);
 };
 
+/**
+ * results
+ *
+ * default implementation for non-parallel touraments
+ * for parallel stages, results makes no sense and implementations have to define
+ * what it means by either manually merging, or doing their own computations
+ */
 Tourney.prototype.results = function () {
+  this._parallelGuard('Tourney::results');
   var currRes = this._trns[0].results();
   // _oldRes maintained as results from previous stage(s)
   var knockedOutResults = this._oldRes.filter(function (r) {

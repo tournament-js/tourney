@@ -1,19 +1,5 @@
 var $ = require('autonomy');
 
-var prepTournaments = function (trns, stage) {
-  var currentStage = [];
-  for (var i = 0; i < trns.length; i += 1) {
-    var ms = trns[i].matches;
-    for (var k = 0; k < ms.length; k += 1) {
-      var m = ms[k];
-      m.id.t = stage; // sub tournament
-      m.id.p = i+1; // parallel segment
-      currentStage.push(m);
-    }
-  }
-  return currentStage;
-};
-
 var invalid = function (trns) {
   if (!Array.isArray(trns) || !trns.length) {
     return "Cannot create tourney without a starting stage";
@@ -45,11 +31,22 @@ function Tourney(trns) {
   this._done = false;
   this._stage = 1;
   this._oldRes = [];
-  this.matches = prepTournaments(trns, this._stage);
+  this.numPlayers = 0;
 
-  this.numPlayers = this._trns.reduce(function (acc, trn) {
-    return acc + trn.numPlayers;
-  }, 0);
+  var that = this;
+  trns.forEach(function (trn) {
+    that.numPlayers += trn.numPlayers;
+    trn.on('score', function (/*id, score*/) {
+      // TODO: update corresponding score in tourney's collected match array?
+      // atm we wait till the end of the round and merge them all then..
+      that._ready = trns.reduce(function (acc, trn) {
+        return acc && trn.isDone();
+      }, true);
+    });
+  });
+
+  this.matches = [];
+
 }
 
 Tourney.inherit = function (Klass, Initial) {
@@ -64,17 +61,14 @@ Tourney.inherit = function (Klass, Initial) {
   };
 };
 
-// Tourney::from and Tourney::_replace are identical to Tournaments..
+// TODO: Tourney::from and Tourney::_replace
 
+// TODO: needed?
+//Tourney.prototype.currentMatches = function () {};
 
-// TODO: getter?
-Tourney.prototype.currentStage = function (p) {
-  return this._trns[(p - 1) || 0].matches;
+Tourney.prototype.currentStage = function () {
+  return this._trns.slice();
 };
-
-//Tourney.prototype.currentPlayers = function (partialId) {
-//  return this._trn.players(partialId);
-//};
 
 Tourney.prototype.createNextStage = function () {
   if (!this._ready) {
@@ -82,16 +76,17 @@ Tourney.prototype.createNextStage = function () {
   }
 
   // update oldRes at end of each stage
-  // NB: this.results() has more info than this._trn.results()
-  this._oldRes = this.results();
+  // NB: this.results() has more info than this._trns[i].results()
+  this._oldRes = this.results(); // NB: forces an implementation in parallel mode
 
   // copy finished rounds matches into big list under a stage guarded ID
   for (var i = 0; i < this._trns.length; i += 1) {
     var trn = this._trns[i];
+
     for (var k = 0; k < trn.matches.length; k += 1) {
       var m = trn.matches[k];
       var copy = {
-        id: $.extend({ t: this.stage, p: i+1 }, m.id),
+        id: $.extend({ t: this._stage, p: i+1 }, m.id),
         p: m.p.slice()
       };
       if (m.m) {
@@ -104,51 +99,20 @@ Tourney.prototype.createNextStage = function () {
   var trns = this._createNext(/*this._stage*/);
   if (!trns.length) {
     this._done = true;
+    // NB: this._trns left untouched
     return false;
   }
   this._stage += 1;
   this._trns = trns;
-  var newMatches = prepTournaments(trns, this._stage);
-  this.matches = this.matches.concat(newMatches);
   this._ready = false;
   return true;
-};
-
+}
+;
 Tourney.prototype.stageComplete = function () {
   return this._ready;
 };
 
-Tourney.prototype.unscorable = function (id, score, allowPast) {
-  if (id.t != null && id.t !== this._stage) {
-    return "cannot rescore finished stages";
-  }
-  var p = (id.p - 1) || 0
-  if (p != null && p >= this._trns.length) {
-    return "invalid parallel stage number";
-  }
-  // Note that classical tournaments just disregard the id.t flag
-  return this._trns[p].unscorable(id, score, allowPast);
-};
 
-Tourney.prototype.score = function (id, score, allowPast) {
-  var invReason = this.unscorable(id, score, true);
-  if (invReason !== null) {
-    console.error("failed scoring match %s with %j", this.rep(id), score);
-    console.error("reason:", invReason);
-    return false;
-  }
-  // score in current tournament - we know _trn.unscorable passes at this point
-  var p = (id.p - 1) || 0;
-  if (this._trns[p].score(id, score, allowPast)) {
-
-    this._ready = this._trns.reduce(function (acc, trn) {
-      return acc && trn.isDone();
-    }, true);
-
-    return true;
-  }
-  return false;
-};
 
 Tourney.prototype._parallelGuard = function (name) {
   if (this._trns.length > 1) {
@@ -158,6 +122,7 @@ Tourney.prototype._parallelGuard = function (name) {
 };
 
 Tourney.prototype.upcoming = function (playerId) {
+  // TODO: maybe extend so we just specify which .p rather than parallelGuard
   this._parallelGuard('Tourney::upcoming');
   return $.extend({ t: this._stage }, this._trns[0].upcoming(playerId));
 };

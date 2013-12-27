@@ -39,8 +39,8 @@ function Tourney(trns) {
     trn.on('score', function (/*id, score*/) {
       // TODO: update corresponding score in tourney's collected match array?
       // atm we wait till the end of the round and merge them all then..
-      that._ready = trns.reduce(function (acc, trn) {
-        return acc && trn.isDone();
+      that._ready = trns.reduce(function (acc, tr) {
+        return acc && tr.isDone();
       }, true);
     });
   });
@@ -109,7 +109,7 @@ Tourney.prototype.createNextStage = function () {
 }
 ;
 Tourney.prototype.stageComplete = function () {
-  return this._ready;
+  return this._ready && true;
 };
 
 

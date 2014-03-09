@@ -70,6 +70,10 @@ Tourney.prototype.currentStage = function () {
   return this._trns.slice();
 };
 
+var disabledScore = function () {
+  throw new Error("Cannot score a tournament in a tourney after stage complete");
+};
+
 Tourney.prototype.createNextStage = function () {
   if (!this._ready) {
     throw new Error("cannot start next stage until current one is done");
@@ -94,6 +98,7 @@ Tourney.prototype.createNextStage = function () {
       }
       this.matches.push(copy);
     }
+    trn.score = disabledScore;
   }
 
   var trns = this._createNext(/*this._stage*/);

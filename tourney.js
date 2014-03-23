@@ -33,21 +33,23 @@ function Tourney(trns) {
   this._oldRes = [];
   this.numPlayers = 0;
 
+  this.numPlayers = this._trns.reduce(function (acc, trn) {
+    acc += trn.numPlayers;
+  }, 0);
+  this.matches = [];
+  this._bindScoreObservers(this._trns);
+}
+
+Tourney.prototype._bindScoreObservers = function (trns) {
   var that = this;
   trns.forEach(function (trn) {
-    that.numPlayers += trn.numPlayers;
     trn.on('score', function (/*id, score*/) {
-      // TODO: update corresponding score in tourney's collected match array?
-      // atm we wait till the end of the round and merge them all then..
       that._ready = trns.reduce(function (acc, tr) {
         return acc && tr.isDone();
       }, true);
     });
   });
-
-  this.matches = [];
-
-}
+};
 
 Tourney.inherit = function (Klass, Initial) {
   Initial = Initial || Tourney;
@@ -109,6 +111,7 @@ Tourney.prototype.createNextStage = function () {
   }
   this._stage += 1;
   this._trns = trns;
+  this._bindScoreObservers(trns);
   this._ready = false;
   return true;
 }

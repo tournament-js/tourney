@@ -1,3 +1,7 @@
+0.2.2 / 2014-03-XX
+==================
+  * Fixed `.stageComplete()` never being set to true for rounds > 2
+
 0.2.1 / 2014-03-09
 ==================
   * Lock down scoring of revealed old stage tournaments (inconsistency bug #5)

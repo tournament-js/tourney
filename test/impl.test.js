@@ -132,16 +132,15 @@ test("parallel stages", function (t) {
   t.equal(stgs2.length, 2, 'two challenges in second round');
 
 
-
-  var stg21 = stgs[0];
+  var stg21 = stgs2[0];
   t.deepEqual(stg21.matches[0].id, { s:1, r:1, m:1 }, "all ones in id 1");
   t.ok(stg21.score(stg21.matches[0].id, [1,0]), "could score it 1");
-  t.ok(stg21.isDone(), 'stg1 is done');
+  t.ok(stg21.isDone(), 'stg21 is done');
 
-  var stg22 = stgs[1];
+  var stg22 = stgs2[1];
   t.deepEqual(stg22.matches[0].id, { s:1, r:1, m:1 }, "all ones in id 2");
   t.ok(stg22.score(stg22.matches[0].id, [1,0]), "could score it 2");
-  t.ok(stg22.isDone(), 'stg2 is done');
+  t.ok(stg22.isDone(), 'stg22 is done');
 
   t.ok(trn.stageComplete(), "challenge 2 stage complete");
   t.ok(!trn.createNextStage(), "could not create any more stages - complete");

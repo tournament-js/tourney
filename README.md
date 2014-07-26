@@ -1,7 +1,9 @@
 # Tourney
-[![Build Status](https://secure.travis-ci.org/clux/tourney.png)](http://travis-ci.org/clux/tourney)
-[![Dependency Status](https://david-dm.org/clux/tourney.png)](https://david-dm.org/clux/tourney)
-[![experimental](http://hughsk.github.io/stability-badges/dist/experimental.svg)](http://nodejs.org/api/documentation.html#documentation_stability_index)
+[![npm status](http://img.shields.io/npm/v/tourney.svg)](https://www.npmjs.org/package/tourney)
+[![build status](https://secure.travis-ci.org/clux/tourney.svg)](http://travis-ci.org/clux/tourney)
+[![dependency status](https://david-dm.org/clux/tourney.svg)](https://david-dm.org/clux/tourney)
+[![coverage status](http://img.shields.io/coveralls/clux/tourney.svg)](https://coveralls.io/r/clux/tourney)
+[![experimental](http://img.shields.io/badge/stability-experimental-DD5F0A.svg)](http://nodejs.org/api/documentation.html#documentation_stability_index)
 
 This module provides a base class for tournament types that is built up of several fixed size tournaments.
 

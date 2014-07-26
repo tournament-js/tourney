@@ -1,5 +1,4 @@
-var test = require('tap').test
-  , Tourney = require('../')
+var Tourney = require(process.env.TOURNEY_COV ? '../tourney-cov.js' : '../')
   , Tournament = require('tournament');
 
 // a silly tournament implementation to test Tourney with
@@ -28,7 +27,7 @@ Challenge.prototype._stats = function (res, m) {
   return res;
 };
 
-test("sequential stages", function (t) {
+exports.sequential = function (t) {
   // create a Tourney that runs 2 challenges
   var Trn = function Trn(np) {
     this.numPlayers = np;
@@ -66,10 +65,10 @@ test("sequential stages", function (t) {
 
   t.ok(trn.isDone(), 'tournament done');
 
-  t.end();
-});
+  t.done();
+};
 
-test("parallel stages", function (t) {
+exports.parallel = function (t) {
   // create a Tourney that runs 2x2 challenges
   var Trn = function Trn(np) {
     this.numPlayers = np;
@@ -147,5 +146,5 @@ test("parallel stages", function (t) {
 
   t.ok(trn.isDone(), 'tournament done');
 
-  t.end();
-});
+  t.done();
+};

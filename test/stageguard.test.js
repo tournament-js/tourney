@@ -1,6 +1,5 @@
-var test = require('tap').test
-  , $ = require('autonomy')
-  , Tourney = require('../')
+var $ = require('autonomy')
+  , Tourney = require(process.env.TOURNEY_COV ? '../tourney-cov.js' : '../')
   , Tournament = require('tournament');
 
 // simple tournament without progression and is just done when everything is
@@ -34,55 +33,49 @@ TestTrn.prototype._createNext = function () {
 };
 TestTrn.prototype.results = $.constant([]); // noop results
 
-test("stage guarding", function (t) {
+exports.stages = function (t) {
   var trn = new TestTrn(8);
-  t.plan(4);
-
   var stage1 = trn.currentStage();
   t.equal(stage1.length, 2, "two SomeTs in first stage");
   var t1 = stage1[0];
   var t2 = stage1[1];
+  t.ok(t1 instanceof SomeT, "t1 is SomeT");
+  t.ok(t2 instanceof SomeT, "t2 is SomeT");
+  t.ok(!t1.isDone(), "t1 not done yet in first stage");
+  t.ok(!t2.isDone(), "t2 not done yet in first stage");
 
-  t.test("completing stage 1", function (t) {
-    t.type(t1, SomeT, "t1 is SomeT");
-    t.type(t2, SomeT, "t2 is SomeT");
-    t.ok(!t1.isDone(), "t1 not done yet in first stage");
-    t.ok(!t2.isDone(), "t2 not done yet in first stage");
-    t1.matches.forEach(function (m) {
-      t1.score(m.id, [2,1]);
-    });
-    t2.matches.forEach(function (m) {
-      t2.score(m.id, [2,1]);
-    });
-    t.ok(t1.isDone(), "t1 done in first stage");
-    t.ok(t2.isDone(), "t2 done in first stage");
+  // score stage 1
+  t1.matches.forEach(function (m) {
+    t1.score(m.id, [2,1]);
+  });
+  t2.matches.forEach(function (m) {
+    t2.score(m.id, [2,1]);
+  });
+  t.ok(t1.isDone(), "t1 done in first stage");
+  t.ok(t2.isDone(), "t2 done in first stage");
 
-    // move to stage 2
-    t.ok(trn.stageComplete(), "stage 1 is complete now");
-    t.ok(trn.createNextStage(), "could create next stage");
-    t.end();
-  });
-  
-  t.test("verify we can't score tournaments in past stages", function (t) {
-    try { t1.score(t1.matches[0].id, [1,0]); }
-    catch (e) {
-      t.equal(e.message, 'Cannot score a tournament in a tourney after stage complete', 'inv');
-      t.end();
-    }
-  });
+  // move to stage 2
+  t.ok(trn.stageComplete(), "stage 1 is complete now");
+  t.ok(trn.createNextStage(), "could create next stage");
 
-  t.test("completing stage 2", function (t) {
-    var stage2 = trn.currentStage();
-    t.equal(stage2.length, 1, "one SomeT in second stage");
-    var last = stage2[0];
-    t.ok(!last.isDone(), "last is not done");
-    last.matches.forEach(function (m) {
-      last.score(m.id, [2,1]);
-    });
-    t.ok(last.isDone(), "last done in second stage");
-    t.ok(trn.stageComplete(), "stage 2 complete");
-    t.ok(!trn.createNextStage(), "no more stages");
-    t.ok(trn.isDone(), "done flag set after failing to createNext");
-    t.end();
+  // verify we can't score tournaments in past stages
+  try { t1.score(t1.matches[0].id, [1,0]); }
+  catch (e) {
+    t.equal(e.message, 'Cannot score a tournament in a tourney after stage complete', 'throw');
+  }
+
+  // score stage 2
+  var stage2 = trn.currentStage();
+  t.equal(stage2.length, 1, "one SomeT in second stage");
+  var last = stage2[0];
+  t.ok(!last.isDone(), "last is not done");
+  last.matches.forEach(function (m) {
+    last.score(m.id, [2,1]);
   });
-});
+  t.ok(last.isDone(), "last done in second stage");
+  t.ok(trn.stageComplete(), "stage 2 complete");
+  t.ok(!trn.createNextStage(), "no more stages");
+  t.ok(trn.isDone(), "done flag set after failing to createNext");
+
+  t.done();
+};

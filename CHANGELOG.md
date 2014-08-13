@@ -1,3 +1,7 @@
+0.2.3 / 2014-XX-XX
+==================
+  * Added coverage
+
 0.2.2 / 2014-03-23
 ==================
   * Fixed `.stageComplete()` never being set to true for rounds > 2

@@ -26,30 +26,17 @@ function Tourney(trns) {
   if (invReason !== null) {
     throw new Error(invReason);
   }
-  this._trns = trns;
-  this._ready = false;
   this._done = false;
   this._stage = 1;
   this._oldRes = [];
   this.numPlayers = 0;
+  this._trns = trns;
 
   this.numPlayers = this._trns.reduce(function (acc, trn) {
     acc += trn.numPlayers;
   }, 0);
   this.matches = [];
-  this._bindScoreObservers(this._trns);
 }
-
-Tourney.prototype._bindScoreObservers = function (trns) {
-  var that = this;
-  trns.forEach(function (trn) {
-    trn.on('score', function (/*id, score*/) {
-      that._ready = trns.reduce(function (acc, tr) {
-        return acc && tr.isDone();
-      }, true);
-    });
-  });
-};
 
 Tourney.inherit = function (Klass, Initial) {
   Initial = Initial || Tourney;
@@ -65,9 +52,7 @@ Tourney.inherit = function (Klass, Initial) {
 
 // TODO: Tourney::from and Tourney::_replace
 
-// TODO: needed?
-//Tourney.prototype.currentMatches = function () {};
-
+// public exposure of tournaments - shallow copy  as to not mess up _trns array
 Tourney.prototype.currentStage = function () {
   return this._trns.slice();
 };
@@ -77,7 +62,7 @@ var disabledScore = function () {
 };
 
 Tourney.prototype.createNextStage = function () {
-  if (!this._ready) {
+  if (!this.stageComplete()) {
     throw new Error("cannot start next stage until current one is done");
   }
 
@@ -111,16 +96,14 @@ Tourney.prototype.createNextStage = function () {
   }
   this._stage += 1;
   this._trns = trns;
-  this._bindScoreObservers(trns);
-  this._ready = false;
   return true;
 }
 ;
 Tourney.prototype.stageComplete = function () {
-  return this._ready && true;
+  return this._trns.every(function (tr) {
+    return tr.isDone();
+  });
 };
-
-
 
 Tourney.prototype._parallelGuard = function (name) {
   if (this._trns.length > 1) {

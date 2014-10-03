@@ -1,6 +1,8 @@
-0.2.3 / 2014-XX-XX
+0.3.0 / 2014-10-XX
 ==================
   * Added coverage
+  * Tracking of embedded tournament instances now more intelligent
+  * Parallel support removed - premature abstraction
 
 0.2.2 / 2014-03-23
 ==================

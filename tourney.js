@@ -1,64 +1,68 @@
-var $ = require('autonomy');
+var $ = require('interlude');
+var Tournament = require('tournament');
+var helper = Tournament.helpers;
 
-var invalid = function (trns) {
-  if (!Array.isArray(trns) || !trns.length) {
-    return "Cannot create tourney without a starting stage";
-  }
-  for (var i = 0; i < trns.length; i += 1) {
-    var trn = trns[i];
-    // NB: Want to check (trn instanceof Tournament), but this won't work if
-    // the required version of tournament is slightly different - thus fuzzy check
-    if (Object(trn) !== trn) {
-      return "Stage 1 tourney " + i + " isn't a Tournament";
-    }
-    if (!Array.isArray(trn.matches)) {
-      return "Stage 1 tourney " + i + " does not have matches";
-    }
-    if (!trn.numPlayers) {
-      return "Stage 1 tourney " + i + " does not have positive numPlayers";
-    }
-  }
-  return null;
+function Id(t, s, r, m) {
+  this.t = t;
+  this.s = s;
+  this.r = r;
+  this.m = m;
+}
+
+Id.prototype.toString = function () {
+  return "T" + this.t + " S" + this.s + " R" + this.r + " M" + this.m;
 };
 
-function Tourney(trns) {
-  var invReason = invalid(trns);
-  if (invReason !== null) {
-    throw new Error(invReason);
-  }
-  this._done = false;
-  this._stage = 1;
-  this._oldRes = [];
-  this.numPlayers = 0;
-  this._trns = trns;
-
-  this.numPlayers = this._trns.reduce(function (acc, trn) {
-    acc += trn.numPlayers;
-  }, 0);
-  this.matches = [];
+function Tourney() {
+  this.stage = 1;
+  this.oldMatches = []; // now we are just a storage place for matches...
+  this._oldRes = []; // TODO: needs the tournament..
 }
 
 Tourney.inherit = function (Klass, Initial) {
   Initial = Initial || Tourney;
   Klass.prototype = Object.create(Initial.prototype);
 
-  // TODO: defaults for _verify _progress _limbo _early and _initResult ?
-  Klass.prototype.rep = Klass.idString;
-
-  Klass.inherit = function (SubKlass) {
-    return Initial.inherit(SubKlass, Klass);
+  var methods = {
+    _mustPropagate: false,
+    _createNext: false
   };
+  Object.keys(methods).forEach(function (fn) {
+    // Implement a default if not already implemented (when Initial is Tourney)
+    Klass.prototype[fn] = Initial.prototype[fn] || $.constant(methods[fn]);
+  });
+
+  Klass.configure = function (obj) {
+    // invalid and defaults have the same format so can reuse the inheritance
+    return Tournament.configure(Klass, obj, Initial);
+  };
+
+  // ignore Klass.sub and Klass.inherit for now for sanity
+};
+
+Tourney.sub = function (name ,init, Initial) {
+  Tournament.sub(name, init, Initial || Tourney);
 };
 
 // TODO: Tourney::from and Tourney::_replace
-
-// public exposure of tournaments - shallow copy  as to not mess up _trns array
-Tourney.prototype.currentStage = function () {
-  return this._trns.slice();
+Tourney.prototype.active = function () {
+  return this._current(); // needs to be implemented in subclass
 };
 
-var disabledScore = function () {
-  throw new Error("Cannot score a tournament in a tourney after stage complete");
+var formatCurrent = function (stg, active) {
+  return active.map(function (m) {
+    var o = {
+      id: new Id(stg, m.id.s, m.id.r, m.id.m),
+      p: m.p.slice(),
+    };
+    if (m.m) {
+      o.m = m.m.slice();
+    }
+    return o;
+  });
+};
+Tourney.prototype.matches = function () {
+  return this.oldMatches.concat(formatCurrent(this.stage, this.active()));
 };
 
 Tourney.prototype.createNextStage = function () {
@@ -71,56 +75,61 @@ Tourney.prototype.createNextStage = function () {
   this._oldRes = this.results(); // NB: forces an implementation in parallel mode
 
   // copy finished rounds matches into big list under a stage guarded ID
-  for (var i = 0; i < this._trns.length; i += 1) {
-    var trn = this._trns[i];
+  var completedMatches = formatCurrent(this.stage, this.active());
+  Array.prototype.push.apply(this.oldMatches, completedMatches);
 
-    for (var k = 0; k < trn.matches.length; k += 1) {
-      var m = trn.matches[k];
-      var copy = {
-        id: $.extend({ t: this._stage, p: i+1 }, m.id),
-        p: m.p.slice()
-      };
-      if (m.m) {
-        copy.m = m.m.slice();
-      }
-      this.matches.push(copy);
-    }
-    trn.score = disabledScore;
-  }
-
-  var trns = this._createNext(/*this._stage*/);
-  if (!trns.length) {
-    this._done = true;
-    // NB: this._trns left untouched
+  // TODO: maybe _createNext can return results from that stage?
+  if (!this._createNext(this.stage + 1)) {
     return false;
   }
-  this._stage += 1;
-  this._trns = trns;
+
+  this.stage += 1;
   return true;
-}
-;
-Tourney.prototype.stageComplete = function () {
-  return this._trns.every(function (tr) {
-    return tr.isDone();
-  });
 };
 
-Tourney.prototype._parallelGuard = function (name) {
-  if (this._trns.length > 1) {
-    var str = "No default " + name + " implementation for parallel stages exist";
-    throw new Error(str);
-  }
+// TODO:  ensure subs implement this themselves..
+//Tourney.prototype.isStageComplete = function () {
+//  return this._stageComplete();
+//};
+
+Tourney.prototype.isDone = function () {
+  return this.isStageComplete() && !this._mustPropagate();
 };
 
 Tourney.prototype.upcoming = function (playerId) {
-  // TODO: maybe extend so we just specify which .p rather than parallelGuard
-  this._parallelGuard('Tourney::upcoming');
-  return $.extend({ t: this._stage }, this._trns[0].upcoming(playerId));
+  // fine to look through old and current matches for this iff all matches needs playing
+  // TODO: ensure duel does not have a bug in it because of this...
+  // one thing here to keep in mind regardless: nothing in oldMatches is upcoming ever
+  // or at least should not be, so may as well just use active
+  return helper.upcoming(this.matches(), playerId);
 };
 
-Tourney.prototype.isDone = function () {
-  return this._done;
+Tourney.prototype.findMatch = function (id) {
+  return helper.findMatch(this.matches(), id);
 };
+Tourney.prototype.findMatches = function (id) {
+  return helper.findMatches(this.matches(), id);
+};
+
+Tourney.prototype.rounds = function (stage) {
+  return helper.partitionMatches(this.matches(), 'r', 't', stage);
+};
+
+Tourney.prototype.section = function (stage) {
+  return helper.partitionMatches(this.matches(), 's', 't', stage);
+};
+
+Tourney.prototype.stages = function (section) {
+  return helper.partitionMatches(this.matches(), 't', 's', section);
+};
+
+Tourney.prototype.matchesFor = function (playerId) {
+  return helper.matchesForPlayer(this.matches(), playerId);
+};
+Tourney.prototype.players = function (id) {
+  return helper.players(this.findMatches(id || {}));
+};
+
 
 var resultEntry = function (res, p) {
   return $.firstBy(function (r) {
@@ -128,16 +137,9 @@ var resultEntry = function (res, p) {
   }, res);
 };
 
-/**
- * results
- *
- * default implementation for non-parallel touraments
- * for parallel stages, results makes no sense and implementations have to define
- * what it means by either manually merging, or doing their own computations
- */
 Tourney.prototype.results = function () {
-  this._parallelGuard('Tourney::results');
-  var currRes = this._trns[0].results();
+  // TODO: this.current no longer exposed to tourney, but need results..
+  var currRes = this.current.results();
   // _oldRes maintained as results from previous stage(s)
   var knockedOutResults = this._oldRes.filter(function (r) {
     // players not in current stage exist in previous results below

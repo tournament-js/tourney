@@ -38,11 +38,11 @@ exports.sequential = function (t) {
   Tourney.inherit(Trn, Tourney);
   Trn.prototype._createNext = function () {
     if (this.idx >= 1) {
-      return [];
+      return null;
     }
     this.idx += 1;
     this.ch = Challenge.from(this.ch, 2);
-    return [this.ch];
+    return this.ch;
   };
 
   var trn = new Trn(2);
@@ -80,7 +80,7 @@ exports.parallel = function (t) {
   Tourney.inherit(Trn, Tourney);
   Trn.prototype._createNext = function () {
     if (this.idx >= 1) {
-      return [];
+      return null;
     }
     this.idx += 1;
     this.ch1 = Challenge.from(this.ch1, 2);

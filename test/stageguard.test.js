@@ -1,4 +1,4 @@
-var $ = require('autonomy')
+var $ = require('interlude')
   , Tourney = require(process.env.TOURNEY_COV ? '../tourney-cov.js' : '../')
   , Tournament = require('tournament');
 
@@ -26,10 +26,10 @@ Tourney.inherit(TestTrn, Tourney);
 // when stage one is done, we can _createNext
 TestTrn.prototype._createNext = function () {
   if (this.playedR1) {
-    return [];
+    return null;
   }
   this.playedR1 = true;
-  return [new SomeT(4)]; // round 2 is the only 'next' stage
+  return new SomeT(4); // round 2 is the only 'next' stage
 };
 TestTrn.prototype.results = $.constant([]); // noop results
 

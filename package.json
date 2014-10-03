@@ -1,6 +1,6 @@
 {
   "name": "tourney",
-  "description": "Base class for a tournament of tournaments",
+  "description": "Base class for a chained tournaments",
   "author": "Eirik Albrigtsen <analsandblaster@gmail.com>",
   "version": "0.2.2",
   "repository": {
@@ -8,9 +8,9 @@
     "url": "clux/tourney"
   },
   "keywords": [
-    "multiple",
+    "sequential"
     "tournament",
-    "container"
+    "fsm"
   ],
   "main": "tourney.js",
   "scripts": {
@@ -19,13 +19,13 @@
     "coveralls": "npm run coverage | coveralls"
   },
   "dependencies": {
-    "autonomy": "~0.5.0"
+    "interlude": "^1.1.0",
+    "tournament": "^2.2.0"
   },
   "devDependencies": {
     "coveralls": "^2.11.1",
     "jscoverage": "^0.5.5",
-    "nodeunit": "^0.9.0",
-    "tournament": "~0.21.0"
+    "nodeunit": "^0.9.0"
   },
   "bugs": {
     "url": "http://github.com/clux/tourney/issues"

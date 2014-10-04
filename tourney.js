@@ -79,7 +79,7 @@ var formatCurrent = function (stage, ms) {
   // prepare matches from a completed instance for oldMatches
   // NB: if `ms` come from a Tourney, the stage `t` key will be overridden
   // and will use the counter relative to this Tourney
-  return ms.map(function (stage, m) {
+  return ms.map(function (m) {
     var o = { id: new Id(stage, m.id), p: m.p.slice() };
     if (m.m) {
       o.m = m.m.slice();

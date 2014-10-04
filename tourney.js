@@ -67,6 +67,8 @@ Tourney.prototype.stageDone = function () {
 };
 
 Tourney.prototype.isDone = function () {
+  // self-referential isDone for Tourney's (checking if subTourneys are done)
+  // but this eventually ends in a Tournament::isDone()
   return this._inst.isDone() && !this._mustPropagate();
 };
 

@@ -15,7 +15,7 @@ Id.prototype.toString = function () {
 // Setup and statics
 //------------------------------------------------------------------
 
-function Tourney(inst) {
+function Tourney(np, inst) {
   this._inst = inst;
   this.matches = inst.matches; // reference to above to match Tournament API
   this.oldMatches = []; // stash matches from completed instances here

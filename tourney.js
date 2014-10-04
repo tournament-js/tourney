@@ -101,9 +101,9 @@ Tourney.prototype.createNextStage = function () {
   }
 
   // _createNext cannot fail now - if it does implementation's fault
-  this.stage += 1;
-  this._inst = this._createNext(this.stage);
+  this._inst = this._createNext(this.stage + 1);
   this.matches = this._inst.matches;
+  this.stage += 1; // update after _createNext in case stage identifiers use counter
   return true;
 };
 

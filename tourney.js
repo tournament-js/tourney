@@ -104,14 +104,14 @@ Tourney.prototype.createNextStage = function () {
   }
 
   // _createNext cannot fail now - if it does implementation's fault
-  this._inst = this._createNext(this.stage + 1);
+  this._inst = this._createNext(this.stage + 1); // releases old instance
   this.matches = this._inst.matches;
   this.stage += 1; // update after _createNext in case stage identifiers use counter
   return true;
 };
 
 //------------------------------------------------------------------
-// Stuff dealing with current matches
+// Methods mimicing Tournaments API
 //------------------------------------------------------------------
 Tourney.prototype.unscorable = function (id, score, allowPast) {
   return this._inst.unscorable(id, score, allowPast);
@@ -122,43 +122,49 @@ Tourney.prototype.score = function (id, score) {
 };
 
 Tourney.prototype.upcoming = function (playerId) {
-  // no upcoming in oldMatches so just look in active
-  // TODO: this is end user stuff though.. maybe extend with Id?
   return helper.upcoming(this.matches, playerId);
+};
+
+Tourney.prototype.players = function (id) {
+  return helper.players(helper.findMatches(this.matches, id || {}));
 };
 
 //------------------------------------------------------------------
 // Match finders - looks at union of active and inactive
 //
-// These are purely convenience methods for end user.
+// These are purely convenience methods for UI and application
 // Tourney & implementations end up using the ones on this._inst
 //------------------------------------------------------------------
 
+/*Tourney.prototype.allMatches = function () {
+  return this.oldMatches.concat(formatCurrent(this.stage, this.matches));
+};
+
 Tourney.prototype.findMatch = function (id) {
-  return helper.findMatch(this.union(), id);
+  return helper.findMatch(this.allMatches(), id);
 };
 Tourney.prototype.findMatches = function (id) {
-  return helper.findMatches(this.union(), id);
+  return helper.findMatches(this.allMatches(), id);
 };
 
 Tourney.prototype.rounds = function (stage) {
-  return helper.partitionMatches(this.union(), 'r', 't', stage);
+  return helper.partitionMatches(this.allMatches(), 'r', 't', stage);
 };
 
 Tourney.prototype.section = function (stage) {
-  return helper.partitionMatches(this.union(), 's', 't', stage);
+  return helper.partitionMatches(this.allMatches(), 's', 't', stage);
 };
 
 Tourney.prototype.stages = function (section) {
-  return helper.partitionMatches(this.union(), 't', 's', section);
+  return helper.partitionMatches(this.allMatches(), 't', 's', section);
 };
 
 Tourney.prototype.matchesFor = function (playerId) {
-  return helper.matchesForPlayer(this.union(), playerId);
+  return helper.matchesForPlayer(this.allMatches(), playerId);
 };
 Tourney.prototype.players = function (id) {
   return helper.players(this.findMatches(id || {}));
-};
+};*/
 
 //------------------------------------------------------------------
 // Results - Not finialized

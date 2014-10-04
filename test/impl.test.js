@@ -27,124 +27,49 @@ Challenge.prototype._stats = function (res, m) {
   return res;
 };
 
-exports.sequential = function (t) {
-  // create a Tourney that runs 2 challenges
-  var Trn = function Trn(np) {
-    this.numPlayers = np;
-    this.ch = new Challenge(np);
-    this.idx = 0;
-    Tourney.call(this, [this.ch]);
-  };
-  Tourney.inherit(Trn, Tourney);
-  Trn.prototype._createNext = function () {
-    if (this.idx >= 1) {
-      return null;
-    }
-    this.idx += 1;
-    this.ch = Challenge.from(this.ch, 2);
-    return this.ch;
-  };
-
-  var trn = new Trn(2);
-  var stg = trn.currentStage()[0];
-  t.ok(stg instanceof Challenge, 'Trn made a Challenge instance');
-
-  t.equal(stg.matches.length, 1, "one match");
-  t.deepEqual(stg.matches[0].id, { s:1, r:1, m:1 }, "all ones in id");
-
-  t.ok(stg.score(stg.matches[0].id, [1,0]), "could score it");
-  t.ok(trn.stageComplete(), "challenge 1 stage complete");
-  t.ok(trn.createNextStage(), "could create next stage");
-
-  var stg2 = trn.currentStage()[0];
-  t.ok(stg2 instanceof Challenge, 'Trn made a Challenge instance');
-
-  t.ok(stg2.score(stg2.matches[0].id, [1,0]), "could score it");
-  t.ok(trn.stageComplete(), "challenge 2 stage complete");
-  t.ok(!trn.createNextStage(), "could not create any more stages - complete");
-
-  t.ok(trn.isDone(), 'tournament done');
-
-  t.done();
+// create a Tourney that runs 2 challenges
+var Trn = Tourney.sub('Trn', function (opts, initParent) {
+  this.idx = 0;
+  initParent(new Challenge(this.numPlayers));
+});
+Trn.configure({
+  defaults: function (np, opts){
+    return opts;
+  },
+  invalid: function (np, opts) {
+    return Challenge.invalid(np, opts);
+  }
+});
+Trn.prototype._mustPropagate = function () {
+  return this.idx === 0;
+};
+Trn.prototype._createNext = function () {
+  this.idx += 1;
+  return Challenge.from(this._inst, 2);
 };
 
-exports.parallel = function (t) {
-  // create a Tourney that runs 2x2 challenges
-  var Trn = function Trn(np) {
-    this.numPlayers = np;
-    this.ch1 = new Challenge(np);
-    this.ch2 = new Challenge(np);
-    this.idx = 0;
-    Tourney.call(this, [this.ch1, this.ch2]);
-  };
-  Tourney.inherit(Trn, Tourney);
-  Trn.prototype._createNext = function () {
-    if (this.idx >= 1) {
-      return null;
-    }
-    this.idx += 1;
-    this.ch1 = Challenge.from(this.ch1, 2);
-    this.ch2 = Challenge.from(this.ch2, 2);
-    return [this.ch1, this.ch2];
-  };
-  Trn.prototype.results = function () {
-    return []; // need a parallel implementation of this
-  };
-
+exports.doubleChallenge = function (t) {
+  t.equal(Trn.invalid(3), "Challenge can only have a multiple of two players");
   var trn = new Trn(2);
-  var stgs = trn.currentStage();
-  t.equal(stgs.length, 2, 'two challenges in first round');
+  t.ok(trn._inst instanceof Challenge, 'Trn made a Challenge instance');
 
-  var stg1 = stgs[0];
-  t.ok(stg1 instanceof Challenge, 'Trn made a Challenge instance 1');
+  t.equal(trn.oldMatches.length, 0, "no cached the matches yet");
+  t.equal(trn.matches.length, 1, "one match");
+  t.deepEqual(trn.matches[0].id, { s:1, r:1, m:1 }, "all ones in id");
 
-  t.equal(stg1.matches.length, 1, "one match 1");
-  t.deepEqual(stg1.matches[0].id, { s:1, r:1, m:1 }, "all ones in id 1");
-
-  t.ok(stg1.score(stg1.matches[0].id, [1,0]), "could score it 1");
-  t.ok(stg1.isDone(), 'stg1 is done');
-
-  // ensure one stage partly done =!> stageComplete()
-  t.ok(!trn.stageComplete(), "challenge 1 stage NOT complete");
-  try {
-    trn.createNextStage();
-    t.ok(false, 'somehow created new stage');
-  }
-  catch (e) {
-    t.ok(true, 'could not create new stage yet');
-  }
-
-  var stg2 = stgs[1];
-  t.ok(stg2 instanceof Challenge, 'Trn made a Challenge instance 2');
-  t.equal(stg2.matches.length, 1, "one match 2");
-  t.deepEqual(stg2.matches[0].id, { s:1, r:1, m:1 }, "all ones in id 2");
-  t.ok(stg2.score(stg2.matches[0].id, [1,0]), "could score it 2");
-  t.ok(stg2.isDone(), 'stg2 is done');
-
-  // but now we should be done with the stage
-  t.ok(trn.stageComplete(), "challenge 1 stage complete");
+  t.ok(trn.score(trn.matches[0].id, [1,0]), "could score it");
+  t.ok(trn.stageDone(), "challenge 1 stage complete");
   t.ok(trn.createNextStage(), "could create next stage");
+  t.ok(!trn.isDone(), "but not yet done");
 
-  // verify second stage works equally
+  t.ok(trn._inst instanceof Challenge, 'Trn made another Challenge instance');
+  t.equal(trn.oldMatches.length, 1, "cached the match from first Challenge");
 
-  var stgs2 = trn.currentStage();
-  t.equal(stgs2.length, 2, 'two challenges in second round');
-
-
-  var stg21 = stgs2[0];
-  t.deepEqual(stg21.matches[0].id, { s:1, r:1, m:1 }, "all ones in id 1");
-  t.ok(stg21.score(stg21.matches[0].id, [1,0]), "could score it 1");
-  t.ok(stg21.isDone(), 'stg21 is done');
-
-  var stg22 = stgs2[1];
-  t.deepEqual(stg22.matches[0].id, { s:1, r:1, m:1 }, "all ones in id 2");
-  t.ok(stg22.score(stg22.matches[0].id, [1,0]), "could score it 2");
-  t.ok(stg22.isDone(), 'stg22 is done');
-
-  t.ok(trn.stageComplete(), "challenge 2 stage complete");
+  t.ok(trn.score(trn.matches[0].id, [1,0]), "could score it");
+  t.ok(trn.stageDone(), "challenge 2 stage complete");
   t.ok(!trn.createNextStage(), "could not create any more stages - complete");
 
-  t.ok(trn.isDone(), 'tournament done');
+  t.ok(trn.isDone(), 'tourney done');
 
   t.done();
 };

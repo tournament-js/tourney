@@ -45,9 +45,12 @@ Tourney.inherit = function (Klass, Initial) {
   // ignore inherited `sub`, `inherit`, and `from` for now for sanity
 };
 
-Tourney.sub = function (name, init, Initial) {
-  // Preserve Tournament API. This ultimately calls (Initial || Tourney).inherit
-  Tournament.sub(name, init, Initial || Tourney);
+Tourney.defaults = Tournament.defaults;
+Tourney.invalid = Tournament.invalid;
+
+Tourney.sub = function (name, init) {
+  // Preserve Tournament API. This ultimately calls Tourney.inherit
+  return Tournament.sub(name, init, Tourney);
 };
 
 // TODO: Tourney.from should be almost identical to Tournament's

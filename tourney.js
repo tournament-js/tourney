@@ -2,21 +2,26 @@ var $ = require('interlude');
 var Tournament = require('tournament');
 var helper = Tournament.helpers;
 
-function Id(t, s, r, m) {
-  this.t = t;
-  this.s = s;
-  this.r = r;
-  this.m = m;
+function Id(t, id) {
+  $.extend(this, id); // Tournament style { s, r, m }
+  this.t = t; // do after extend to override if `id.t` exists
 }
 
 Id.prototype.toString = function () {
   return "T" + this.t + " S" + this.s + " R" + this.r + " M" + this.m;
 };
 
-function Tourney() {
+//------------------------------------------------------------------
+// Setup and statics
+//------------------------------------------------------------------
+
+function Tourney(inst) {
+  this._inst = inst;
+  this.matches = inst.matches; // reference to above to match Tournament API
+  this.oldMatches = []; // stash matches from completed instances here
   this.stage = 1;
-  this.oldMatches = []; // now we are just a storage place for matches...
-  this._oldRes = []; // TODO: needs the tournament..
+  // for determining when we can expect Tourney API
+  Object.defineProperty(this, 'hasStages', { value: true });
 }
 
 Tourney.inherit = function (Klass, Initial) {
@@ -24,8 +29,8 @@ Tourney.inherit = function (Klass, Initial) {
   Klass.prototype = Object.create(Initial.prototype);
 
   var methods = {
-    _mustPropagate: false,
-    _createNext: false
+    _createNext: false,
+    _mustPropagate: false
   };
   Object.keys(methods).forEach(function (fn) {
     // Implement a default if not already implemented (when Initial is Tourney)
@@ -33,103 +38,126 @@ Tourney.inherit = function (Klass, Initial) {
   });
 
   Klass.configure = function (obj) {
-    // invalid and defaults have the same format so can reuse the inheritance
+    // Preserve Tournament API for invalid and defaults
     return Tournament.configure(Klass, obj, Initial);
   };
 
-  // ignore Klass.sub and Klass.inherit for now for sanity
+  // ignore inherited `sub`, `inherit`, and `from` for now for sanity
 };
 
-Tourney.sub = function (name ,init, Initial) {
+Tourney.sub = function (name, init, Initial) {
+  // Preserve Tournament API. This ultimately calls (Initial || Tourney).inherit
   Tournament.sub(name, init, Initial || Tourney);
 };
 
-// TODO: Tourney::from and Tourney::_replace
-Tourney.prototype.active = function () {
-  return this._current(); // needs to be implemented in subclass
+// TODO: Tourney.from should be almost identical to Tournament's
+// but it cannot replaceMatches
+// so that part either needs to be virtual
+// or Klass.from is configured manually s.t.:
+//  - Klass.from(inst, np, opts)
+//  - -> var firstInst = FirstKlass.from(inst, np, subSetOfOpts);
+//  - return new Klass(firstInst); // special ctor?
+
+//------------------------------------------------------------------
+// Helpers for piping modules together
+//------------------------------------------------------------------
+
+Tourney.prototype.stageDone = function () {
+  return this._inst[this._inst.hasStages ? 'stageDone' : 'isDone']();
 };
 
-var formatCurrent = function (stg, active) {
-  return active.map(function (m) {
-    var o = {
-      id: new Id(stg, m.id.s, m.id.r, m.id.m),
-      p: m.p.slice(),
-    };
+Tourney.prototype.isDone = function () {
+  return this._inst.isDone() && !this._mustPropagate();
+};
+
+var formatCurrent = function (stage, ms) {
+  // prepare matches from a completed instance for oldMatches
+  // NB: if `ms` come from a Tourney, the stage `t` key will be overridden
+  // and will use the counter relative to this Tourney
+  return ms.map(function (stage, m) {
+    var o = { id: new Id(stage, m.id), p: m.p.slice() };
     if (m.m) {
       o.m = m.m.slice();
     }
     return o;
   });
 };
-Tourney.prototype.matches = function () {
-  return this.oldMatches.concat(formatCurrent(this.stage, this.active()));
-};
+
 
 Tourney.prototype.createNextStage = function () {
-  if (!this.stageComplete()) {
+  if (!this.stageDone()) {
     throw new Error("cannot start next stage until current one is done");
   }
 
-  // update oldRes at end of each stage
-  // NB: this.results() has more info than this._trns[i].results()
-  this._oldRes = this.results(); // NB: forces an implementation in parallel mode
-
-  // copy finished rounds matches into big list under a stage guarded ID
-  var completedMatches = formatCurrent(this.stage, this.active());
+  // extend current matches' ids with `t` = this.stage (overwriting if necessary)
+  var completedMatches = formatCurrent(this.stage, this.matches);
   Array.prototype.push.apply(this.oldMatches, completedMatches);
 
-  // TODO: maybe _createNext can return results from that stage?
-  if (!this._createNext(this.stage + 1)) {
+  if (this.isDone()) {
+    this.matches = []; // ensure no double copies into oldMatches
     return false;
   }
 
+  // _createNext cannot fail now - if it does implementation's fault
   this.stage += 1;
+  this._inst = this._createNext(this.stage);
+  this.matches = this._inst.matches;
   return true;
 };
 
-// TODO:  ensure subs implement this themselves..
-//Tourney.prototype.isStageComplete = function () {
-//  return this._stageComplete();
-//};
+//------------------------------------------------------------------
+// Stuff dealing with current matches
+//------------------------------------------------------------------
+Tourney.prototype.unscorable = function (id, score, allowPast) {
+  return this._inst.unscorable(id, score, allowPast);
+};
 
-Tourney.prototype.isDone = function () {
-  return this.isStageComplete() && !this._mustPropagate();
+Tourney.prototype.score = function (id, score) {
+  return this._inst.score(id, score);
 };
 
 Tourney.prototype.upcoming = function (playerId) {
-  // fine to look through old and current matches for this iff all matches needs playing
-  // TODO: ensure duel does not have a bug in it because of this...
-  // one thing here to keep in mind regardless: nothing in oldMatches is upcoming ever
-  // or at least should not be, so may as well just use active
-  return helper.upcoming(this.matches(), playerId);
+  // no upcoming in oldMatches so just look in active
+  // TODO: this is end user stuff though.. maybe extend with Id?
+  return helper.upcoming(this.matches, playerId);
 };
 
+//------------------------------------------------------------------
+// Match finders - looks at union of active and inactive
+//
+// These are purely convenience methods for end user.
+// Tourney & implementations end up using the ones on this._inst
+//------------------------------------------------------------------
+
 Tourney.prototype.findMatch = function (id) {
-  return helper.findMatch(this.matches(), id);
+  return helper.findMatch(this.union(), id);
 };
 Tourney.prototype.findMatches = function (id) {
-  return helper.findMatches(this.matches(), id);
+  return helper.findMatches(this.union(), id);
 };
 
 Tourney.prototype.rounds = function (stage) {
-  return helper.partitionMatches(this.matches(), 'r', 't', stage);
+  return helper.partitionMatches(this.union(), 'r', 't', stage);
 };
 
 Tourney.prototype.section = function (stage) {
-  return helper.partitionMatches(this.matches(), 's', 't', stage);
+  return helper.partitionMatches(this.union(), 's', 't', stage);
 };
 
 Tourney.prototype.stages = function (section) {
-  return helper.partitionMatches(this.matches(), 't', 's', section);
+  return helper.partitionMatches(this.union(), 't', 's', section);
 };
 
 Tourney.prototype.matchesFor = function (playerId) {
-  return helper.matchesForPlayer(this.matches(), playerId);
+  return helper.matchesForPlayer(this.union(), playerId);
 };
 Tourney.prototype.players = function (id) {
   return helper.players(this.findMatches(id || {}));
 };
 
+//------------------------------------------------------------------
+// Results - Not finialized
+//------------------------------------------------------------------
 
 var resultEntry = function (res, p) {
   return $.firstBy(function (r) {

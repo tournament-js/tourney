@@ -1,8 +1,9 @@
 {
   "name": "tourney",
-  "description": "Base class for a chained tournaments",
+  "description": "Multi-stage tournaments",
   "author": "Eirik Albrigtsen <analsandblaster@gmail.com>",
   "version": "0.2.2",
+  "stability": "unstable",
   "repository": {
     "type": "git",
     "url": "clux/tourney"
@@ -20,7 +21,7 @@
   },
   "dependencies": {
     "interlude": "^1.1.0",
-    "tournament": "^2.2.0"
+    "tournament": "^2.3.0"
   },
   "devDependencies": {
     "coveralls": "^2.11.1",

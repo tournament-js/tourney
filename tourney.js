@@ -19,7 +19,8 @@ function Tourney(np, inst) {
   this._inst = inst;
   this.matches = inst.matches; // reference to above to match Tournament API
   this.oldMatches = []; // stash matches from completed instances here
-  this.stage = 1;
+  this._stage = 1;
+  this._oldRes = [];
   // for determining when we can expect Tourney API
   Object.defineProperty(this, 'hasStages', { value: true });
 }
@@ -42,24 +43,49 @@ Tourney.inherit = function (Klass, Initial) {
     return Tournament.configure(Klass, obj, Initial);
   };
 
-  // ignore inherited `sub`, `inherit`, and `from` for now for sanity
+  Klass.from = function (inst, numPlayers, opts) {
+    // Since Tourney instances have same interface, can reuse Tournament.from
+    var from = Tournament.from(Klass, inst, numPlayers, opts);
+    from._oldRes = inst.results();
+    return from;
+  };
+
+  // ignore inherited `sub` and `inherit` for now for sanity
 };
 
 Tourney.defaults = Tournament.defaults;
 Tourney.invalid = Tournament.invalid;
 
-Tourney.sub = function (name, init) {
+Tourney.sub = function (name, init, Initial) {
   // Preserve Tournament API. This ultimately calls Tourney.inherit
-  return Tournament.sub(name, init, Tourney);
+  return Tournament.sub(name, init, Initial || Tourney);
 };
 
-// TODO: Tourney.from should be almost identical to Tournament's
-// but it cannot replaceMatches
-// so that part either needs to be virtual
-// or Klass.from is configured manually s.t.:
-//  - Klass.from(inst, np, opts)
-//  - -> var firstInst = FirstKlass.from(inst, np, subSetOfOpts);
-//  - return new Klass(firstInst); // special ctor?
+//------------------------------------------------------------------
+// Methods mimicing Tournaments API
+//------------------------------------------------------------------
+
+Tourney.prototype.unscorable = function (id, score, allowPast) {
+  return this._inst.unscorable(id, score, allowPast);
+};
+
+Tourney.prototype.score = function (id, score) {
+  return this._inst.score(id, score);
+};
+
+Tourney.prototype.upcoming = function (playerId) {
+  return helper.upcoming(this.matches, playerId);
+};
+
+Tourney.prototype.players = function (id) {
+  return helper.players(helper.findMatches(this.matches, id || {}));
+};
+
+Tourney.prototype.isDone = function () {
+  // self-referential isDone for Tourney's (checking if subTourneys are done)
+  // but this eventually ends in a Tournament::isDone()
+  return this._inst.isDone() && !this._mustPropagate(this._stage);
+};
 
 //------------------------------------------------------------------
 // Helpers for piping modules together
@@ -67,12 +93,6 @@ Tourney.sub = function (name, init) {
 
 Tourney.prototype.stageDone = function () {
   return this._inst[this._inst.hasStages ? 'stageDone' : 'isDone']();
-};
-
-Tourney.prototype.isDone = function () {
-  // self-referential isDone for Tourney's (checking if subTourneys are done)
-  // but this eventually ends in a Tournament::isDone()
-  return this._inst.isDone() && !this._mustPropagate();
 };
 
 var formatCurrent = function (stage, ms) {
@@ -93,40 +113,37 @@ Tourney.prototype.createNextStage = function () {
   if (!this.stageDone()) {
     throw new Error("cannot start next stage until current one is done");
   }
-
-  // extend current matches' ids with `t` = this.stage (overwriting if necessary)
-  var completedMatches = formatCurrent(this.stage, this.matches);
-  Array.prototype.push.apply(this.oldMatches, completedMatches);
-
   if (this.isDone()) {
-    this.matches = []; // ensure no double copies into oldMatches
     return false;
   }
 
+  // update results for players still in it
+  this._oldRes = this.results();
+
+  // extend current matches' ids with `t` = this._stage (overwriting if necessary)
+  var completedMatches = formatCurrent(this._stage, this.matches);
+  Array.prototype.push.apply(this.oldMatches, completedMatches);
+
   // _createNext cannot fail now - if it does implementation's fault
-  this._inst = this._createNext(this.stage + 1); // releases old instance
+  this._stage += 1;
+  this._inst = this._createNext(this._stage); // releases old instance
   this.matches = this._inst.matches;
-  this.stage += 1; // update after _createNext in case stage identifiers use counter
   return true;
 };
 
-//------------------------------------------------------------------
-// Methods mimicing Tournaments API
-//------------------------------------------------------------------
-Tourney.prototype.unscorable = function (id, score, allowPast) {
-  return this._inst.unscorable(id, score, allowPast);
-};
-
-Tourney.prototype.score = function (id, score) {
-  return this._inst.score(id, score);
-};
-
-Tourney.prototype.upcoming = function (playerId) {
-  return helper.upcoming(this.matches, playerId);
-};
-
-Tourney.prototype.players = function (id) {
-  return helper.players(helper.findMatches(this.matches, id || {}));
+Tourney.prototype.complete = function () {
+  if (!this.isDone()) {
+    throw new Error("cannot complete a tourney until it is done");
+  }
+  // last oldMatches extend
+  var completedMatches = formatCurrent(this._stage, this.matches);
+  Array.prototype.push.apply(this.oldMatches, completedMatches);
+  this.matches = [];
+  this.unscorable = $.constant("cannot score matches after completing a tourney");
+  this.score = function () {
+    console.error(this.unscorable());
+    return false;
+  };
 };
 
 //------------------------------------------------------------------
@@ -137,7 +154,7 @@ Tourney.prototype.players = function (id) {
 //------------------------------------------------------------------
 
 /*Tourney.prototype.allMatches = function () {
-  return this.oldMatches.concat(formatCurrent(this.stage, this.matches));
+  return this.oldMatches.concat(formatCurrent(this._stage, this.matches));
 };
 
 Tourney.prototype.findMatch = function (id) {
@@ -167,9 +184,14 @@ Tourney.prototype.players = function (id) {
 };*/
 
 //------------------------------------------------------------------
-// Results - Not finialized
+// Results
+//
+// If current instance does not report results for all players,
+// we append knocked out players' results from their previous stage.
+// By induction, all players always exist in `results`.
 //------------------------------------------------------------------
 
+// TODO: use Tournament.resultEntry and make it not throw
 var resultEntry = function (res, p) {
   return $.firstBy(function (r) {
     return r.seed === p;
@@ -177,8 +199,7 @@ var resultEntry = function (res, p) {
 };
 
 Tourney.prototype.results = function () {
-  // TODO: this.current no longer exposed to tourney, but need results..
-  var currRes = this.current.results();
+  var currRes = this._inst.results();
   // _oldRes maintained as results from previous stage(s)
   var knockedOutResults = this._oldRes.filter(function (r) {
     // players not in current stage exist in previous results below
@@ -187,5 +208,7 @@ Tourney.prototype.results = function () {
 
   return currRes.concat(knockedOutResults);
 };
+
+//------------------------------------------------------------------
 
 module.exports = Tourney;

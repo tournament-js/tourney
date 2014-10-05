@@ -1,8 +1,9 @@
-0.3.0 / 2014-10-XX
+1.0.0alpha1 / 2014-10-05
 ==================
+  * **Complete rewrite of tourney** - documentation to follow
+  * Parallel support removed
+  * API now mimics Tournament and proxies onto instances where present
   * Added coverage
-  * Tracking of embedded tournament instances now more intelligent
-  * Parallel support removed - premature abstraction
 
 0.2.2 / 2014-03-23
 ==================

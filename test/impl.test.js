@@ -61,6 +61,8 @@ exports.challengeChain = function (t) {
     [ [1,2], [3,4], [5,6], [7,8] ],
     "match players contents"
   );
+  t.deepEqual(trn.findMatch({s:1, r:1, m:4}), $.last(trn.matches), 'findMatch');
+  t.deepEqual(trn.findMatches({r:1}), trn.matches, 'findMatches');
 
   t.ok(!trn.stageDone(), "stage not done - so the next thing will throw");
   try {

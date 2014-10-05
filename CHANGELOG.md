@@ -1,4 +1,4 @@
-1.0.0alpha1 / 2014-10-05
+1.0.0-0 (premajor 1.0.0) / 2014-10-05
 ==================
   * **Complete rewrite of tourney** - documentation to follow
   * Parallel support removed

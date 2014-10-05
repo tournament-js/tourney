@@ -1,10 +1,9 @@
 var $ = require('interlude');
 var Tournament = require('tournament');
-var helper = Tournament.helpers;
 
 function Id(t, id) {
   $.extend(this, id); // Tournament style { s, r, m }
-  this.t = t; // do after extend to override if `id.t` exists
+  this.t = t; // add stage number - override if exists (from sub Tourney)
 }
 
 Id.prototype.toString = function () {
@@ -17,7 +16,7 @@ Id.prototype.toString = function () {
 
 function Tourney(np, inst) {
   this._inst = inst;
-  this.matches = inst.matches; // reference to above to match Tournament API
+  this.matches = inst.matches; // proxy reference
   this.oldMatches = []; // stash matches from completed instances here
   this._stage = 1;
   this._oldRes = [];
@@ -62,34 +61,37 @@ Tourney.sub = function (name, init, Initial) {
 };
 
 //------------------------------------------------------------------
-// Methods mimicing Tournaments API
+// Pure proxy methods
 //------------------------------------------------------------------
 
 Tourney.prototype.unscorable = function (id, score, allowPast) {
   return this._inst.unscorable(id, score, allowPast);
 };
-
 Tourney.prototype.score = function (id, score) {
   return this._inst.score(id, score);
 };
-
 Tourney.prototype.upcoming = function (playerId) {
-  return helper.upcoming(this.matches, playerId);
+  return this._inst.upcoming(playerId);
+};
+Tourney.prototype.players = function (id) {
+  return this._inst.players(id);
+};
+Tourney.prototype.findMatch = function (id) {
+  return this._inst.findMatch(id);
+};
+Tourney.prototype.findMatches = function (id) {
+  return this._inst.findMatches(id);
 };
 
-Tourney.prototype.players = function (id) {
-  return helper.players(helper.findMatches(this.matches, id || {}));
-};
+//------------------------------------------------------------------
+// Helpers for piping modules together
+//------------------------------------------------------------------
 
 Tourney.prototype.isDone = function () {
   // self-referential isDone for Tourney's (checking if subTourneys are done)
   // but this eventually ends in a Tournament::isDone()
   return this._inst.isDone() && !this._mustPropagate(this._stage);
 };
-
-//------------------------------------------------------------------
-// Helpers for piping modules together
-//------------------------------------------------------------------
 
 Tourney.prototype.stageDone = function () {
   return this._inst[this._inst.hasStages ? 'stageDone' : 'isDone']();
@@ -107,7 +109,6 @@ var formatCurrent = function (stage, ms) {
     return o;
   });
 };
-
 
 Tourney.prototype.createNextStage = function () {
   if (!this.stageDone()) {
@@ -147,23 +148,9 @@ Tourney.prototype.complete = function () {
 };
 
 //------------------------------------------------------------------
-// Match finders - looks at union of active and inactive
-//
-// These are purely convenience methods for UI and application
-// Tourney & implementations end up using the ones on this._inst
+// Extra helpers - probably won't be included
 //------------------------------------------------------------------
-
-/*Tourney.prototype.allMatches = function () {
-  return this.oldMatches.concat(formatCurrent(this._stage, this.matches));
-};
-
-Tourney.prototype.findMatch = function (id) {
-  return helper.findMatch(this.allMatches(), id);
-};
-Tourney.prototype.findMatches = function (id) {
-  return helper.findMatches(this.allMatches(), id);
-};
-
+/*
 Tourney.prototype.rounds = function (stage) {
   return helper.partitionMatches(this.allMatches(), 'r', 't', stage);
 };
@@ -175,13 +162,7 @@ Tourney.prototype.section = function (stage) {
 Tourney.prototype.stages = function (section) {
   return helper.partitionMatches(this.allMatches(), 't', 's', section);
 };
-
-Tourney.prototype.matchesFor = function (playerId) {
-  return helper.matchesForPlayer(this.allMatches(), playerId);
-};
-Tourney.prototype.players = function (id) {
-  return helper.players(this.findMatches(id || {}));
-};*/
+*/
 
 //------------------------------------------------------------------
 // Results

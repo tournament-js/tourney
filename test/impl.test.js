@@ -27,6 +27,7 @@ Challenge.prototype._stats = function (res, m) {
   }
   return res;
 };
+Challenge.prototype._safe = $.constant(true); // always allow rescore while in stage
 
 // create a Tourney that runs 2 challenges
 var Trn = Tourney.sub('Trn', function (opts, initParent) {
@@ -50,7 +51,7 @@ Trn.prototype._createNext = function () {
 };
 
 exports.challengeChain = function (t) {
-  t.equal(Trn.invalid(7), "Challenge can only have a multiple of two players", 'inv');
+  t.equal(Trn.invalid(7), "Challenge can only have a multiple of two players", 'in');
   var trn = new Trn(8); // by defaults, a 2-stage
   t.ok(trn._inst instanceof Challenge, 'Trn made a Challenge instance');
 
@@ -67,6 +68,12 @@ exports.challengeChain = function (t) {
   });
 
   t.ok(trn.stageDone(), "challenge 1 stage complete");
+  try {
+    trn.complete();
+  }
+  catch (e) {
+    t.equal(e.message, "cannot complete a tourney until it is done", "duh");
+  }
   t.ok(trn.createNextStage(), "could create next stage");
   t.ok(!trn.isDone(), "but not yet done");
 
@@ -83,7 +90,9 @@ exports.challengeChain = function (t) {
   t.ok(!trn.createNextStage(), "could not create any more stages - complete");
 
   t.ok(trn.isDone(), 'tourney done');
-  t.ok(trn.score({ s:1, r:1, m:1 }, [0,2]), "can still rescore without past access");
+  var t2m1 = { s: 1, r: 1, m: 1 };
+  t.ok(trn.score(t2m1, [0,2]), "can still rescore without past access");
+  t.equal(trn.unscorable(t2m1, [0, 2]), null, "unscorable is slave to _safe");
   trn.complete(); // seal it
 
   t.equal(trn.oldMatches.length, 4+2, 'everything saved here now');
@@ -117,6 +126,7 @@ exports.challengeChain = function (t) {
   // verify that we can chain this into another Tourney
   var from = Trn.from(trn, 2, { stages: 1 }); // explicity specify a 1-stage
   t.deepEqual(from.players(), [4,8], 'forwarded the top 2 from Tourney');
+  t.deepEqual(trn.upcoming(4), trn.matches, "4 is in the final");
   t.deepEqual(from.matches[0].p, [4,8], 'and they are in m1');
   t.ok(from.score(from.matches[0].id, [1, 0]), 'score final');
   t.ok(from.isDone(), 'and it is done');
@@ -125,6 +135,10 @@ exports.challengeChain = function (t) {
   // verify results have been updated where it counts
   expRes[1].pos = 2;
   t.deepEqual(from.results(), expRes, 'from results verification');
+
+  // Ensure Matches in oldMatches are all Tourney style Ids with their own toString
+  t.equal(from.oldMatches.length, 1, "one match in this tourney"); // TODO: copy old?
+  t.equal($.last(from.oldMatches).id + '', "T1 S1 R1 M1", "id relative to this trn");
 
   t.done();
 };

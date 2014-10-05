@@ -62,6 +62,14 @@ exports.challengeChain = function (t) {
     "match players contents"
   );
 
+  t.ok(!trn.stageDone(), "stage not done - so the next thing will throw");
+  try {
+    trn.createNextStage();
+  }
+  catch (e) {
+    t.equal(e.message, "cannot start next stage until current one is done", 'did');
+  }
+
   t.deepEqual(trn.players(), $.range(8), "players");
   trn.matches.forEach(function (m) {
     t.ok(trn.score(m.id, [0, 1]), 'score lowest seed winning t1');

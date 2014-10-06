@@ -30,7 +30,9 @@ Tourney.inherit = function (Klass, Initial) {
 
   var methods = {
     _createNext: false,
-    _mustPropagate: false
+    _mustPropagate: false,
+    _proxyRes: false,
+    _updateRes: null
   };
   Object.keys(methods).forEach(function (fn) {
     // Implement a default if not already implemented (when Initial is Tourney)
@@ -39,7 +41,7 @@ Tourney.inherit = function (Klass, Initial) {
 
   Klass.configure = function (obj) {
     // Preserve Tournament API for invalid and defaults
-    return Tournament.configure(Klass, obj, Initial);
+    Tournament.configure(Klass, obj, Initial);
   };
 
   Klass.from = function (inst, numPlayers, opts) {
@@ -192,7 +194,7 @@ Tourney.prototype.stages = function (section) {
 // By induction, all players always exist in `results`.
 //------------------------------------------------------------------
 
-// TODO: use Tournament.resultEntry and make it not throw
+// NB: same as Tournament.resultEntry but does not throw
 var resultEntry = function (res, p) {
   return $.firstBy(function (r) {
     return r.seed === p;
@@ -200,14 +202,25 @@ var resultEntry = function (res, p) {
 };
 
 Tourney.prototype.results = function () {
-  var currRes = this._inst.results();
-  // _oldRes maintained as results from previous stage(s)
-  var knockedOutResults = this._oldRes.filter(function (r) {
+  var curr = this._inst.results();
+  if (this._proxyRes()) {
+    return curr;
+  }
+
+  var previous = this._oldRes;
+  var knockOut = previous.filter(function (r) {
     // players not in current stage exist in previous results below
-    return !resultEntry(currRes, r.seed);
+    return !resultEntry(curr, r.seed);
   });
 
-  return currRes.concat(knockedOutResults);
+  var updater = this._updateRes.bind(this);
+  return curr.map(function (r) {
+    var old = resultEntry(previous, r.seed);
+    if (old) {
+      updater(r, old);
+    }
+    return r;
+  }).concat(knockOut);
 };
 
 //------------------------------------------------------------------

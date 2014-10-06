@@ -98,7 +98,8 @@ Tourney.prototype.getName = function (depth) {
 Tourney.prototype.isDone = function () {
   // self-referential isDone for Tourney's (checking if subTourneys are done)
   // but this eventually ends in a Tournament::isDone()
-  return this._inst.isDone() && !this._mustPropagate(this._stage);
+  return this._inst.isDone() &&
+        !this._mustPropagate(this._stage, this._inst, this._opts);
 };
 
 Tourney.prototype.stageDone = function () {
@@ -146,7 +147,7 @@ Tourney.prototype.createNextStage = function () {
   }
 
   // otherwise _createNext needs to handle progression
-  this._inst = this._createNext(this._stage); // releases old instance
+  this._inst = this._createNext(this._stage, this._inst, this._opts);
   this.matches = this._inst.matches;
   return true;
 };

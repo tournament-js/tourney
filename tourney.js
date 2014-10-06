@@ -118,15 +118,26 @@ Tourney.prototype.createNextStage = function () {
     return false;
   }
 
-  // update results for players still in it
-  this._oldRes = this.results();
-
   // extend current matches' ids with `t` = this._stage (overwriting if necessary)
   var completedMatches = formatCurrent(this._stage, this.matches);
   Array.prototype.push.apply(this.oldMatches, completedMatches);
 
-  // _createNext cannot fail now - if it does implementation's fault
+  // update results for players still in it
+  this._oldRes = this.results();
+
   this._stage += 1;
+  // propagate createNext if we have a Tourney instance embedded
+  if (this._inst.hasStages && !this._inst.isDone()) {
+    this._inst.createNextStage();
+    this.matches = this._inst.matches; // update link
+    return true;
+  }
+  // and seal it down if all its stages were done
+  if (this._inst.hasStages) {
+    this._inst.complete();
+  }
+
+  // otherwise _createNext needs to handle progression
   this._inst = this._createNext(this._stage); // releases old instance
   this.matches = this._inst.matches;
   return true;

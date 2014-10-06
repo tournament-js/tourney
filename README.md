@@ -36,11 +36,11 @@ GsFfa.configure({
 });
 
 // set up rules for stage progression
-GsFfa.prototype._mustPropagate = function () {
-  return this._inst.name === 'GroupStage-Tb';
+GsFfa.prototype._mustPropagate = function (stage, inst) {
+  return inst.name === 'GroupStage-Tb';
 };
-GsFfa.prototype._createNext = function () {
-  return Ffa.from(this._inst, this.opts.groupStage.limit, this.opts.ffa);
+GsFfa.prototype._createNext = function (stage, inst, opts) {
+  return Ffa.from(inst, opts.groupStage.limit, opts.ffa);
 };
 
 module.exports = GsFfa;

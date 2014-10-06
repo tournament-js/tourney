@@ -87,6 +87,14 @@ Tourney.prototype.findMatches = function (id) {
 // Helpers for piping modules together
 //------------------------------------------------------------------
 
+Tourney.prototype.getName = function (depth) {
+  var names = [];
+  for (var inst = this._inst; inst ; inst = inst._inst) {
+    names.push(inst.name);
+  }
+  return names.slice(0, depth).join('::');
+};
+
 Tourney.prototype.isDone = function () {
   // self-referential isDone for Tourney's (checking if subTourneys are done)
   // but this eventually ends in a Tournament::isDone()

@@ -82,13 +82,13 @@ var opts = {
 var trn = new MyTourney(32, opts);
 
 // then:
-trn.matches; // gives you the current stage
-trn.score(trn.matches.id[i], [1,0]); // score a match like a tournament
+trn.matches; // gives you the current stage (groupstage first)
+trn.score(trn.matches[i].id, [1,0]); // score a match like a tournament
 
 // when all scored:
 trn.stageDone(); // true
 trn.createNextStage();
-trn.matches; // now the second stage
+trn.matches; // now the second stage (either rount 1 of FFA or tiebreakers for the groupstage)
 
 // keep scoring and making next stages until:
 trn.isDone(); // cannot create more stages now

@@ -88,7 +88,7 @@ trn.score(trn.matches[i].id, [1,0]); // score a match like a tournament
 // when all scored:
 trn.stageDone(); // true
 trn.createNextStage();
-trn.matches; // now the second stage (either rount 1 of FFA or tiebreakers for the groupstage)
+trn.matches; // either round 1 of FFA or tiebreakers for the groupstage
 
 // keep scoring and making next stages until:
 trn.isDone(); // cannot create more stages now

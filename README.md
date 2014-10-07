@@ -20,57 +20,92 @@ Implement a `Tourney` and set it up to use the `Tournament` or `Tourney` instanc
 var Tourney = require('tourney');
 var Gs = require('groupstage-tb');
 var Ffa = require('ffa-tb');
+var Duel = require('duel')
 
-var GsFfa = Tourney.sub('GsFfa', function (opts, init) {
+var MyTourney = Tourney.sub('MyTourney', function (opts, init) {
   init(new Gs(this.numPlayers, opts.groupStage));
 });
 
 // set up interface rules and default arguments:
-GsFfa.configure({
+MyTourney.configure({
   defaults: function (numPlayers, opts) {
+    opts.groupStage = Gs.defaults(numPlayers, opts.groupStage || {});
+    opts.ffa = Ffa.defaults(opts.groupStage.limit, opts.ffa || {});
+    opts.duel = Duel.defaults(opts.ffa.limit, opts.duel || {});
     return opts;
   },
   invalid: function (numPlayers, opts) {
-    return null;
+    return Gs.invalid(numPlayers, opts.groupStage) ||
+           Ffa.invalid(opts.groupStage.limit, opts.ffa) ||
+           Duel.invalid(opts.ffa.limit, opts.duel) ||
+           null;
   }
 });
 
-// set up rules for stage progression
-GsFfa.prototype._mustPropagate = function (stage, inst) {
-  return inst.name === 'GroupStage-Tb';
+MyTourney.prototype.inGroupStage = function () {
+  return this.getName(1) === Gs.name;
 };
-GsFfa.prototype._createNext = function (stage, inst, opts) {
-  return Ffa.from(inst, opts.groupStage.limit, opts.ffa);
+MyTourney.prototype.inFFA = function () {
+  return this.getName(1) === Ffa.name;
+};
+MyTourney.prototype.inDuel = function () {
+  return this.getName(1) === Duel.name;
 };
 
-module.exports = GsFfa;
+// set up rules for stage progression
+MyTourney.prototype._mustPropagate = function (stage, inst) {
+  return this.inGroupStage() || this.inFFA();
+};
+MyTourney.prototype._createNext = function (stage, inst, opts) {
+  if (this.inGroupStage()) {
+    return Ffa.from(inst, opts.groupStage.limit, opts.ffa);
+  }
+  // otherwise it must be FFA
+  return Duel.from(inst, opts.ffa.limit, opts.duel);
+};
+
+module.exports = MyTourney;
 ```
 
 Then you can use your module like any other [Tournament](https://npmjs.org/tournament), but with extra stage separation:
 
 ```js
-var GsFfa = require('./gs-ffa.js') // say
+var MyTourney = require('./gs-ffa.js') // say
 
 var opts = {
-  groupStage: { groupSize: 4, limit: 4 }, // want the top 4 to proceed to Ffa
-  ffa: { sizes: [4], limit: 1 } // one match of size 4 - tiebreak until clear winner
+  groupStage: { groupSize: 4, limit: 16 }, // want the top 16 to proceed to Ffa
+  ffa: { sizes: [4, 4], advancers: [2], limit: 4 }, // top 4 to Duel stage
+  duel: { last: Duel.LB }
 }
-var trn = new GsFfa(16, opts);
-trn.matches; // gives you matches in a 16 player groupstage
+var trn = new MyTourney(32, opts);
+trn.inGroupStage(); // true
+trn.matches; // gives you matches in a 32 player groupstage
 trn.matches.forEach(function (m) {
   trn.score(m.id, [1,0]); // score it like a tournament
 });
 trn.stageDone(); // true
 
-trn.createNextStage(); // true
+trn.createNextStage();
+trn.inFFA(); // true
 trn.matches; // a single ffa match featuring winners
 // NB: if groupstage did not pick a clear winner of each group in stage 1:
 // we would have been in tiebreaker featuring a subset of the players
 
-trn.score({ s: 1, r: 1, m: 1}, [4,0,0,0]); // score s.t. clear winner
+// score ffa round 1
+trn.stageDone(); // true - ffa round 1 done
 
-trn.stageDone(); // true - ffa done
-trn.isDone(); // true - no tiebreaker needed
+trn.createNextStage();
+trn.matches; // either round 2 of ffa or tiebreaker for round 1 of ffa
+// keep scoring until ffa bit is done
+
+trn.stageDone();
+trn.createNextStage();
+trn.inDuel(); // true
+trn.matches; // a double elimination duel tournament featuring 4 players
+// NB: if FFA did not pick clear winners in any of its two roun
+
+// score duel..
+trn.isDone(); // true
 trn.complete(); // lock down state
 ```
 

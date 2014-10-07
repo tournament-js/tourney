@@ -42,6 +42,7 @@ MyTourney.configure({
   }
 });
 
+// add some standard helpers
 MyTourney.prototype.inGroupStage = function () {
   return this.getName(1) === Gs.name;
 };
@@ -57,6 +58,7 @@ MyTourney.prototype._mustPropagate = function (stage, inst) {
   return this.inGroupStage() || this.inFFA();
 };
 MyTourney.prototype._createNext = function (stage, inst, opts) {
+  // called when stageDone && _mustPropagate
   if (this.inGroupStage()) {
     return Ffa.from(inst, opts.groupStage.limit, opts.ffa);
   }
@@ -78,34 +80,18 @@ var opts = {
   duel: { last: Duel.LB }
 }
 var trn = new MyTourney(32, opts);
-trn.inGroupStage(); // true
-trn.matches; // gives you matches in a 32 player groupstage
-trn.matches.forEach(function (m) {
-  trn.score(m.id, [1,0]); // score it like a tournament
-});
+
+// then:
+trn.matches; // gives you the current stage
+trn.score(trn.matches.id[i], [1,0]); // score a match like a tournament
+
+// when all scored:
 trn.stageDone(); // true
-
 trn.createNextStage();
-trn.inFFA(); // true
-trn.matches; // a single ffa match featuring winners
-// NB: if groupstage did not pick a clear winner of each group in stage 1:
-// we would have been in tiebreaker featuring a subset of the players
+trn.matches; // now the second stage
 
-// score ffa round 1
-trn.stageDone(); // true - ffa round 1 done
-
-trn.createNextStage();
-trn.matches; // either round 2 of ffa or tiebreaker for round 1 of ffa
-// keep scoring until ffa bit is done
-
-trn.stageDone();
-trn.createNextStage();
-trn.inDuel(); // true
-trn.matches; // a double elimination duel tournament featuring 4 players
-// NB: if FFA did not pick clear winners in any of its two roun
-
-// score duel..
-trn.isDone(); // true
+// keep scoring and making next stages until:
+trn.isDone(); // cannot create more stages now
 trn.complete(); // lock down state
 ```
 

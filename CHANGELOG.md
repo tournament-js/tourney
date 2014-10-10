@@ -1,6 +1,6 @@
-1.0.0-0 (premajor 1.0.0) / 2014-10-05
+1.0.0 / 2014-10-10
 ==================
-  * **Complete rewrite of tourney** - documentation to follow
+  * **Complete rewrite of tourney** with full documentation
   * Parallel support removed
   * API now mimics Tournament and proxies onto instances where present
   * Added coverage

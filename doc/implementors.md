@@ -211,7 +211,7 @@ You should provide helpers to let users know what stage they are in. This avoids
 
 ```js
 SomeTourney.prototype.inGroupStage = function () {
-  return this.getName(1) === 'GroupStage-Tb;
+  return this.getName(1) === 'GroupStage-Tb';
 };
 SomeTourney.prototype.inTieBreaker = function () {
   return this.getName(2) === 'GroupStage-Tb::TieBreaker';

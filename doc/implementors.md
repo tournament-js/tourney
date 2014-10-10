@@ -206,3 +206,16 @@ SomeTourney.prototype._updateRes = function (r, prev) {
 Not recommended. Requires a more detailed understanding of how the tourney base class works.
 
 
+### stage identification
+You should provide helpers to let users know what stage they are in. This avoids people from digging into the brain of the underlying state machine. In general make one for every stage:
+
+```js
+SomeTourney.prototype.inGroupStage = function () {
+  return this.getName(1) === 'GroupStage-Tb;
+};
+SomeTourney.prototype.inTieBreaker = function () {
+  return this.getName(2) === 'GroupStage-Tb::TieBreaker';
+};
+```
+
+Note the internal `getName(n)` helper which looks `n` levels down and joins all the found names with '::'. Since `GroupStage-Tb` contains either a `GroupStage` or `TieBreaker` as its active instance, the one two levels down is either `GroupStage-Tb::GroupStage` or `GroupStage-Tb::Tiebreaker`. Regardless of which of the two we are in, this is still arguably considered to be part of the groupstage. But how you choose this is up to you. Just think about it.

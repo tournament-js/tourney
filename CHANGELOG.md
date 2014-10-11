@@ -1,3 +1,7 @@
+1.1.0 / 2014-10-11
+==================
+  * Add `::state` and `.restore` to mimic Tournament API
+
 1.0.0 / 2014-10-10
 ==================
   * **Complete rewrite of tourney** with full documentation

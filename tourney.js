@@ -28,15 +28,15 @@ Tourney.inherit = function (Klass, Initial) {
   Initial = Initial || Tourney;
   Klass.prototype = Object.create(Initial.prototype);
 
-  var methods = {
+  var virtuals = {
     _createNext: false,
     _mustPropagate: false,
     _proxyRes: false,
     _updateRes: null
   };
-  Object.keys(methods).forEach(function (fn) {
+  Object.keys(virtuals).forEach(function (fn) {
     // Implement a default if not already implemented (when Initial is Tourney)
-    Klass.prototype[fn] = Initial.prototype[fn] || $.constant(methods[fn]);
+    Klass.prototype[fn] = Initial.prototype[fn] || $.constant(virtuals[fn]);
   });
 
   Klass.configure = function (obj) {

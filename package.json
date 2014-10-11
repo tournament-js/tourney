@@ -15,13 +15,13 @@
   ],
   "main": "tourney.js",
   "scripts": {
-    "test": "nodeunit test/*.js --reporter=verbose",
-    "coverage": "jscoverage tourney.js && TOURNEY_COV=1 nodeunit --reporter=lcov test",
+    "test": "nodeunit test --reporter=verbose",
+    "coverage": "jscoverage tourney.js && TOURNEY_COV=1 nodeunit test --reporter=lcov",
     "coveralls": "npm run coverage | coveralls"
   },
   "dependencies": {
     "interlude": "^1.1.0",
-    "tournament": "^2.4.0"
+    "tournament": "^3.0.0"
   },
   "devDependencies": {
     "coveralls": "^2.11.1",

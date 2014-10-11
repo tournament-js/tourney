@@ -152,3 +152,33 @@ exports.challengeChain = function (t) {
 
   t.done();
 };
+
+exports.emitter = function (t) {
+  var trn = new Trn(8); // by defaults, a 2-stage
+  trn.matches.forEach(function (m) {
+    t.ok(trn.score(m.id, [0, 1]), 'score t1');
+  });
+  t.ok(trn.createNextStage(), "could create next stage");
+  trn.matches.forEach(function (m) {
+    t.ok(trn.score(m.id, [1,0]), 'score t2');
+  });
+  trn.complete();
+
+  t.deepEqual(trn.state, [
+      { type: 'score', id: { s: 1, r: 1, m: 1 }, score: [0,1] },
+      { type: 'score', id: { s: 1, r: 1, m: 2 }, score: [0,1] },
+      { type: 'score', id: { s: 1, r: 1, m: 3 }, score: [0,1] },
+      { type: 'score', id: { s: 1, r: 1, m: 4 }, score: [0,1] },
+      { type: 'next' },
+      { type: 'score', id: { s: 1, r: 1, m: 1 }, score: [1,0] },
+      { type: 'score', id: { s: 1, r: 1, m: 2 }, score: [1,0] },
+      { type: 'done' }
+    ],
+    'everything captured'
+  );
+
+  var trn2 = Trn.restore(8, {}, trn.state);
+  t.deepEqual(trn2.oldMatches, trn.oldMatches, 'restored from state');
+
+  t.done();
+};

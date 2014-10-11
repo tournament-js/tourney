@@ -20,6 +20,7 @@ function Tourney(np, inst) {
   this.oldMatches = []; // stash matches from completed instances here
   this._stage = 1;
   this._oldRes = [];
+  this.state = [];
   // for determining when we can expect Tourney API
   Object.defineProperty(this, 'hasStages', { value: true });
 }
@@ -50,6 +51,22 @@ Tourney.inherit = function (Klass, Initial) {
     from._oldRes = inst.results();
     return from;
   };
+  Klass.restore = function (numPlayers, opts, state) {
+    var trn = new Klass(numPlayers, opts);
+    state.forEach(function (o) {
+      if (o.type === 'score') {
+        trn.score(o.id, o.score);
+      }
+      if (o.type === 'next') {
+        trn.createNextStage();
+      }
+      if (o.type === 'done') {
+        trn.complete();
+      }
+    });
+    return trn;
+  };
+
 
   // ignore inherited `sub` and `inherit` for now for sanity
 };
@@ -63,14 +80,11 @@ Tourney.sub = function (name, init, Initial) {
 };
 
 //------------------------------------------------------------------
-// Pure proxy methods
+// Const proxy getters
 //------------------------------------------------------------------
 
 Tourney.prototype.unscorable = function (id, score, allowPast) {
   return this._inst.unscorable(id, score, allowPast);
-};
-Tourney.prototype.score = function (id, score) {
-  return this._inst.score(id, score);
 };
 Tourney.prototype.upcoming = function (playerId) {
   return this._inst.upcoming(playerId);
@@ -86,9 +100,8 @@ Tourney.prototype.findMatches = function (id) {
 };
 
 //------------------------------------------------------------------
-// Helpers for piping modules together
+// Const getters
 //------------------------------------------------------------------
-
 Tourney.prototype.getName = function (depth) {
   var names = [];
   for (var inst = this._inst; inst ; inst = inst._inst) {
@@ -106,6 +119,15 @@ Tourney.prototype.isDone = function () {
 
 Tourney.prototype.stageDone = function () {
   return this._inst[this._inst.hasStages ? 'stageDone' : 'isDone']();
+};
+
+//------------------------------------------------------------------
+// State modifiers
+//------------------------------------------------------------------
+
+Tourney.prototype.score = function (id, score) {
+  return this._inst.score(id, score) &&
+         this.state.push({ type: 'score', id: id, score: score });
 };
 
 var formatCurrent = function (stage, ms) {
@@ -135,12 +157,14 @@ Tourney.prototype.createNextStage = function () {
 
   // update results for players still in it
   this._oldRes = this.results();
+  this.matches = [];
 
   this._stage += 1;
   // propagate createNext if we have a Tourney instance embedded
   if (this._inst.hasStages && !this._inst.isDone()) {
     this._inst.createNextStage();
-    this.matches = this._inst.matches; // update link
+    this.matches = this._inst.matches;
+    this.state.push({ type: 'next' });
     return true;
   }
   // and seal it down if all its stages were done
@@ -151,6 +175,7 @@ Tourney.prototype.createNextStage = function () {
   // otherwise _createNext needs to handle progression
   this._inst = this._createNext(this._stage, this._inst, this._opts);
   this.matches = this._inst.matches;
+  this.state.push({ type: 'next' });
   return true;
 };
 
@@ -167,6 +192,7 @@ Tourney.prototype.complete = function () {
     console.error(this.unscorable());
     return false;
   };
+  this.state.push({ type: 'done' });
 };
 
 //------------------------------------------------------------------

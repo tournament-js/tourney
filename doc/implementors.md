@@ -89,7 +89,7 @@ module.exports = MyTourney;
 - `_mustPropagate` MUST be implemented
 - `Tourney` methods MUST NOT be overridden to maintain expected behaviour
 
-### configure
+## configure
 Configure needs to be called with the rules and defaults for the options object.
 It takes two functions; `defaults` and `invalid`, the first of which MUST exist.
 Both functions take the same arguments as the tournament constructor; `(numPlayers, opts)`.
@@ -118,20 +118,20 @@ SomeTournament.configure({
 
 `defaults` is there to help ensure that the `opts` object passed into `invalid` and the tourney constructor match what you'd expect. Since tourney's normally glue together other tourneys, defaults should rarely need special options, but simply delegate to child tourneys.
 
-#### defaults examples
+### defaults examples
 Unlike tournaments which (in all currently known cases) have sensible default behaviour, Tourneys usually do not because the limit must always be explicit. It usually makes no sense to guess how many people to propagate from stage N to stage N+1, so no effort is required to guesss this.
 
-#### limits
+### limits
 In the above example, the winners from the `GroupStage` (with tiebreakers) is moved into an `FFA` tournament (with tiebreakers), which is moved into a `Duel` tournament.
 
 In each case, the initial tourney has to account for the limit to ensure sufficient tiebreaking happens to move on to the next stage. `FfaTb` does not itself require a `limit` to be set (because you can still tiebreak all matches apart from the final), therefore we need to introduce a check for it. `GroupStageTb` does require a `limit` because otherwise you would be using plain `GroupStage`.
 
 Lastly, `Duel` does not (at present time) support limits and thus has to be placed at the last stage, taking the top `opts.ffa.limit` playes from stage two. This means that if we ever wanted to use this module as a building block, it would need to be the last stage, because it could never support limits as long as `Duel` does not.
 
-### progression
+## progression
 To get tourney's `createNextStage`, `stageDone` and `isDone` working, you will need to implement the following two methods:
 
-#### _mustPropagate :: (stage, inst, opts) -> Bool
+### _mustPropagate :: (stage, inst, opts) -> Bool
 A method that is called when the current instance is done and use requested `createNextStage`. You can inspect the current state of the current active stage's instance and decide whether or not we need to propagate. Typically, you always need to progress from certain stages so you normally only need to check what stage we are in, or what type of it (since certain tourney's keep going for a while until everything's sufficiently untied).
 
 ```js
@@ -152,7 +152,7 @@ FfaTb.prototype._mustPropagate = function (stg, inst, opts) {
 ```
 
 
-#### _createNext :: (stage, inst, opts) -> Tourney/Tournament
+### _createNext :: (stage, inst, opts) -> Tourney/Tournament
 The most imortant stage is the forwarder. When we `_mustPropagate` and `stageDone`, this will be called when `createNextStage` is requested. In this case you must ALWAYS produce the next tournament. If you are unable to do so, you implemented `_mustPropagate` wrongly.
 
 ```js
@@ -170,7 +170,7 @@ Most of the heavy lifting here is done for you by delegating to the next tourney
 This MUST map onto what you defined in your `invalid` function to avoid impossible errors.
 
 
-### results
+## results
 The arguably most important feature of tourneys is the ability to get detailed statistics of all the players as the tourney progresses. Thankfully, this is usually gotten completely for free because of a simple assumption:
 
 The number of players in stage N+1 is always less than or equal to the number of players in staeg N.
@@ -179,8 +179,8 @@ Thus the default results simply update the results for the players in the curren
 
 That said, there are a few things you may want to do:
 
-#### Implementing custom results
-##### _proxyRes
+### Implementing custom results
+#### _proxyRes
 In certain cases you do not want to even look at the old results, like if you are in a tiebreaker stage, and just want to proxy results calls onto the tiebreaker instance in this case.
 
 To do this simply implement this function to specify when to proxy results onto the current instance:
@@ -191,7 +191,7 @@ SomeTourney.prototype._proxyRes = function () {
 };
 ```
 
-##### _updateRes :: (Old Result, New Result)
+#### _updateRes :: (Old Result, New Result)
 You may want to update the new result attributes based on attributes in the previous. In this case you can implement this function.
 
 ```js
@@ -202,11 +202,11 @@ SomeTourney.prototype._updateRes = function (r, prev) {
 }
 ```
 
-#### Overriding results
+### Overriding results
 Not recommended. Requires a more detailed understanding of how the tourney base class works.
 
 
-### stage identification
+## stage identification
 You should provide helpers to let users know what stage they are in. This avoids people from digging into the brain of the underlying state machine. In general make one for every stage:
 
 ```js
@@ -219,3 +219,17 @@ SomeTourney.prototype.inTieBreaker = function () {
 ```
 
 Note the internal `getName(n)` helper which looks `n` levels down and joins all the found names with '::'. Since `GroupStage-Tb` contains either a `GroupStage` or `TieBreaker` as its active instance, the one two levels down is either `GroupStage-Tb::GroupStage` or `GroupStage-Tb::Tiebreaker`. Regardless of which of the two we are in, this is still arguably considered to be part of the groupstage. But how you choose this is up to you. Just think about it.
+
+## naming conventions
+Notes that you probably should follow, but are ultimately just laid out here to understand the intentions of the code. The following holds for both tourneys and tournaments:
+
+### private
+Members starting with `_` are private for all next users of wherever we are:
+
+- tourney's members starting with `_` should not be used in subclass
+- subclass members starting with `_` should not be uses by user of subclass
+
+### virtuals
+Prototype methods in subclass that start with `_` are generally virtual calls expected by the base class (because simply hiding a function in a scope is generally better than putting a function on the prototype with `_` prefix unless it has to be used outside the class).
+
+Tournament/Tourney implements sensible defaults for unimplemented virtuals on the the base prototype, thus this method of factoring out logic has proven quite successful.

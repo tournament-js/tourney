@@ -196,23 +196,6 @@ Tourney.prototype.complete = function () {
 };
 
 //------------------------------------------------------------------
-// Extra helpers - probably won't be included
-//------------------------------------------------------------------
-/*
-Tourney.prototype.rounds = function (stage) {
-  return helper.partitionMatches(this.allMatches(), 'r', 't', stage);
-};
-
-Tourney.prototype.section = function (stage) {
-  return helper.partitionMatches(this.allMatches(), 's', 't', stage);
-};
-
-Tourney.prototype.stages = function (section) {
-  return helper.partitionMatches(this.allMatches(), 't', 's', section);
-};
-*/
-
-//------------------------------------------------------------------
 // Results
 //
 // If current instance does not report results for all players,

@@ -234,4 +234,5 @@ Tourney.prototype.results = function () {
 
 //------------------------------------------------------------------
 
+Tourney.Id = Id;
 module.exports = Tourney;

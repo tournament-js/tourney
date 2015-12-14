@@ -14,16 +14,17 @@
   ],
   "main": "tourney.js",
   "scripts": {
-    "test": "nodeunit test --reporter=verbose",
-    "coverage": "jscoverage tourney.js && TOURNEY_COV=1 nodeunit test --reporter=lcov"
+    "test": "bndg test/*.js",
+    "precoverage": "istanbul cover bndg test/*.test.js",
+    "coverage": "cat coverage/lcov.info && rm -rf coverage"
   },
   "dependencies": {
     "interlude": "^1.1.0",
     "tournament": "^3.0.0"
   },
   "devDependencies": {
-    "jscoverage": "^0.5.5",
-    "nodeunit": "^0.9.0"
+    "bandage": "^0.4.0",
+    "istanbul": "^0.4.1"
   },
   "bugs": {
     "url": "http://github.com/clux/tourney/issues"

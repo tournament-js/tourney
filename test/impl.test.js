@@ -1,6 +1,10 @@
-var Tourney = require(process.env.TOURNEY_COV ? '../tourney-cov.js' : '../')
+var Tourney = require('..')
   , $ = require('interlude')
-  , Tournament = require('tournament');
+  , Tournament = require('tournament')
+  , Id = Tourney.Id
+  , test = require('bandage');
+
+var tid = (t, s, r, m) => new Id(t, {s, r, m});
 
 // a silly tournament implementation to test Tourney with
 var Challenge = Tournament.sub('Challenge', function (opts, initParent) {
@@ -50,7 +54,7 @@ Trn.prototype._createNext = function () {
   return Challenge.from(this._inst, this.numPlayers / 2);
 };
 
-exports.challengeChain = function (t) {
+test('challengeChain', function *(t) {
   t.equal(Trn.invalid(7), "Challenge can only have a multiple of two players", 'in');
   var trn = new Trn(8); // by defaults, a 2-stage
   t.ok(trn._inst instanceof Challenge, 'Trn made a Challenge instance');
@@ -110,13 +114,13 @@ exports.challengeChain = function (t) {
   t.ok(!trn.score({ s:1, r:1, m:1 }, [1,0]), "cannot rescore now");
   t.deepEqual(trn.oldMatches, [
       // stage 1
-      { id: { t: 1, s: 1, r: 1, m: 1}, p: [1,2], m: [0,1] },
-      { id: { t: 1, s: 1, r: 1, m: 2}, p: [3,4], m: [0,1] },
-      { id: { t: 1, s: 1, r: 1, m: 3}, p: [5,6], m: [0,1] },
-      { id: { t: 1, s: 1, r: 1, m: 4}, p: [7,8], m: [0,1] },
+      { id: tid(1, 1, 1, 1), p: [1,2], m: [0,1] },
+      { id: tid(1, 1, 1, 2), p: [3,4], m: [0,1] },
+      { id: tid(1, 1, 1, 3), p: [5,6], m: [0,1] },
+      { id: tid(1, 1, 1, 4), p: [7,8], m: [0,1] },
       // stage 2
-      { id: { t: 2, s: 1, r: 1, m: 1}, p: [2,4], m: [0,2] }, // was rescored
-      { id: { t: 2, s: 1, r: 1, m: 2}, p: [6,8], m: [0,1] }
+      { id: tid(2, 1, 1, 1), p: [2,4], m: [0,2] }, // was rescored
+      { id: tid(2, 1, 1, 2), p: [6,8], m: [0,1] }
     ], 'full match verification'
   );
 
@@ -149,11 +153,9 @@ exports.challengeChain = function (t) {
   // Ensure Matches in oldMatches are all Tourney style Ids with their own toString
   t.equal(from.oldMatches.length, 1, "one match in this tourney"); // TODO: copy old?
   t.equal($.last(from.oldMatches).id + '', "T1 S1 R1 M1", "id relative to this trn");
+});
 
-  t.done();
-};
-
-exports.emitter = function (t) {
+test('emitter', function *(t) {
   var trn = new Trn(8); // by defaults, a 2-stage
   trn.matches.forEach(function (m) {
     t.ok(trn.score(m.id, [0, 1]), 'score t1');
@@ -179,6 +181,4 @@ exports.emitter = function (t) {
 
   var trn2 = Trn.restore(8, {}, trn.state);
   t.deepEqual(trn2.oldMatches, trn.oldMatches, 'restored from state');
-
-  t.done();
-};
+});

@@ -61,48 +61,39 @@ Trn.prototype._createNext = function () {
 };
 
 test('challengeChain', function *(t) {
-  t.equal(Trn.invalid(7), 'Challenge can only have a multiple of two players', 'in');
+  t.eq(Trn.invalid(7), 'Challenge can only have a multiple of two players', 'in');
   var errorCalls = 0; // verify that we get 1 error call further down
   var errorLog = () => { errorCalls += 1; };
   var trn = new Trn(8, { log: { error: errorLog }}); // by defaults, a 2-stage
   t.ok(trn._inst instanceof Challenge, 'Trn made a Challenge instance');
 
-  t.equal(trn.oldMatches.length, 0, 'no cached the matches yet');
-  t.equal(trn.matches.length, 4, 'matches');
-  t.deepEqual(trn.matches.map($.get('p')),
+  t.eq(trn.oldMatches.length, 0, 'no cached the matches yet');
+  t.eq(trn.matches.length, 4, 'matches');
+  t.eq(trn.matches.map($.get('p')),
     [ [1,2], [3,4], [5,6], [7,8] ],
     'match players contents'
   );
-  t.deepEqual(trn.findMatch({s: 1, r: 1, m: 4}), $.last(trn.matches), 'findMatch');
-  t.deepEqual(trn.findMatches({r: 1}), trn.matches, 'findMatches');
+  t.eq(trn.findMatch({s: 1, r: 1, m: 4}), $.last(trn.matches), 'findMatch');
+  t.eq(trn.findMatches({r: 1}), trn.matches, 'findMatches');
 
-  t.ok(!trn.stageDone(), 'stage not done - so the next thing will throw');
-  try {
-    trn.createNextStage();
-  }
-  catch (e) {
-    t.equal(e.message, 'cannot start next stage until current one is done', 'did');
-  }
+  t.ok(!trn.stageDone(), 'stage not done yet - can not createNextStage');
+  t.throws(trn.createNextStage, /cannot start next stage/, 'createNextStage throws');
 
-  t.deepEqual(trn.players(), $.range(8), 'players');
+  t.eq(trn.players(), $.range(8), 'players');
   trn.matches.forEach(function (m) {
     t.ok(trn.score(m.id, [0, 1]), 'score lowest seed winning t1');
   });
 
-  t.ok(trn.stageDone(), 'challenge 1 stage complete');
-  try {
-    trn.complete();
-  }
-  catch (e) {
-    t.equal(e.message, 'cannot complete a tourney until it is done', 'duh');
-  }
+  t.ok(trn.stageDone(), 'challenge 1/2 stage complete');
+  t.throws(trn.complete, /cannot complete a tourney/, 'complete throws');
+
   t.ok(trn.createNextStage(), 'could create next stage');
   t.ok(!trn.isDone(), 'but not yet done');
 
   t.ok(trn._inst instanceof Challenge, 'Trn made another Challenge instance');
-  t.equal(trn.oldMatches.length, 4, 'cached the matches from first Challenge');
+  t.eq(trn.oldMatches.length, 4, 'cached the matches from first Challenge');
 
-  t.deepEqual(trn.players(), [2,4,6,8], 'winners forwarded');
+  t.eq(trn.players(), [2,4,6,8], 'winners forwarded');
 
   trn.matches.forEach(function (m) {
     t.ok(trn.score(m.id, [0,1]), 'score lowest seed winning t2');
@@ -114,18 +105,18 @@ test('challengeChain', function *(t) {
   t.ok(trn.isDone(), 'tourney done');
   var t2m1 = { s: 1, r: 1, m: 1 };
   t.ok(trn.score(t2m1, [0,2]), 'can still rescore without past access');
-  t.equal(trn.unscorable(t2m1, [0, 2]), null, 'unscorable is slave to _safe');
+  t.eq(trn.unscorable(t2m1, [0, 2]), null, 'unscorable is slave to _safe');
   trn.complete(); // seal it
 
-  t.equal(trn.oldMatches.length, 4+2, 'everything saved here now');
-  t.equal(trn.matches.length, 0, 'and nothing left');
+  t.eq(trn.oldMatches.length, 4+2, 'everything saved here now');
+  t.eq(trn.matches.length, 0, 'and nothing left');
 
   // scoring now would log if we hadn't voided it - verify that it worked
-  t.equal(errorCalls, 0, 'nothing bad yet');
-  t.ok(!trn.score({ s:1, r:1, m:1 }, [1,0]), 'cannot rescore now');
-  t.equal(errorCalls, 1, 'got error event');
+  t.eq(errorCalls, 0, 'nothing bad yet');
+  t.ok(!trn.score({s: 1, r: 1, m: 1}, [1,0]), 'cannot rescore now');
+  t.eq(errorCalls, 1, 'got error event');
 
-  t.deepEqual(trn.oldMatches, [
+  t.eq(trn.oldMatches, [
     // stage 1
     { id: tid(1, 1, 1, 1), p: [1,2], m: [0,1] },
     { id: tid(1, 1, 1, 2), p: [3,4], m: [0,1] },
@@ -148,24 +139,24 @@ test('challengeChain', function *(t) {
     { seed: 5, wins: 0, for: 0, against: 0, pos: 5 },
     { seed: 7, wins: 0, for: 0, against: 0, pos: 5 }
   ];
-  t.deepEqual(trn.results(), expRes, 'full results verification');
+  t.eq(trn.results(), expRes, 'full results verification');
 
   // verify that we can chain this into another Tourney
   var from = Trn.from(trn, 2, { stages: 1 }); // explicity specify a 1-stage
-  t.deepEqual(from.players(), [4,8], 'forwarded the top 2 from Tourney');
-  t.deepEqual(trn.upcoming(4), trn.matches, '4 is in the final');
-  t.deepEqual(from.matches[0].p, [4,8], 'and they are in m1');
+  t.eq(from.players(), [4,8], 'forwarded the top 2 from Tourney');
+  t.eq(trn.upcoming(4), trn.matches, '4 is in the final');
+  t.eq(from.matches[0].p, [4,8], 'and they are in m1');
   t.ok(from.score(from.matches[0].id, [1, 0]), 'score final');
   t.ok(from.isDone(), 'and it is done');
   from.complete();
 
   // verify results have been updated where it counts
   expRes[1].pos = 2;
-  t.deepEqual(from.results(), expRes, 'from results verification');
+  t.eq(from.results(), expRes, 'from results verification');
 
   // Ensure Matches in oldMatches are all Tourney style Ids with their own toString
-  t.equal(from.oldMatches.length, 1, 'one match in this tourney'); // TODO: copy old?
-  t.equal($.last(from.oldMatches).id + '', 'T1 S1 R1 M1', 'id relative to this trn');
+  t.eq(from.oldMatches.length, 1, 'one match in this tourney'); // TODO: copy old?
+  t.eq($.last(from.oldMatches).id + '', 'T1 S1 R1 M1', 'id relative to this trn');
 });
 
 test('emitter', function *(t) {
@@ -179,7 +170,7 @@ test('emitter', function *(t) {
   });
   trn.complete();
 
-  t.deepEqual(trn.state, [
+  t.eq(trn.state, [
     { type: 'score', id: { s: 1, r: 1, m: 1 }, score: [0,1] },
     { type: 'score', id: { s: 1, r: 1, m: 2 }, score: [0,1] },
     { type: 'score', id: { s: 1, r: 1, m: 3 }, score: [0,1] },
@@ -192,7 +183,7 @@ test('emitter', function *(t) {
   );
 
   var trn2 = Trn.restore(8, {}, trn.state);
-  t.deepEqual(trn2.oldMatches, trn.oldMatches, 'restored from state');
+  t.eq(trn2.oldMatches, trn.oldMatches, 'restored from state');
 });
 
 test('configure', function *(t) {

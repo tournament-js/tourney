@@ -186,11 +186,17 @@ test('emitter', function *(t) {
   t.eq(trn2.oldMatches, trn.oldMatches, 'restored from state');
 });
 
-test('configure', function *(t) {
+test('errorLog voided', function *(t) {
   t.plan(2); // failed scoring + reason
   var errlog = function () {
     t.pass('error log called');
   };
   var trn = new Trn(8, { log: { error: errlog }});
+  trn.score(trn.matches[0].id, [1,1]);
+});
+
+test('errorLog stderr', function *(t) {
+  t.pass('stderr messages should be next to this');
+  var trn = new Trn(8);
   trn.score(trn.matches[0].id, [1,1]);
 });

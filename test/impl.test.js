@@ -31,12 +31,18 @@ Challenge.prototype._stats = function (res, m) {
   }
   return res;
 };
+Challenge.prototype._verify = function (m, score) {
+  if (score[0] === score[1]) {
+    return 'cannot draw match';
+  }
+  return null;
+};
 Challenge.prototype._safe = $.constant(true); // always allow rescore while in stage
 
 // create a Tourney that runs 2 challenges
 var Trn = Tourney.sub('Trn', function (opts, initParent) {
   Object.defineProperty(this, 'stages', { value: opts.stages });
-  initParent(new Challenge(this.numPlayers));
+  initParent(new Challenge(this.numPlayers, opts));
 });
 Trn.configure({
   defaults: function (np, opts){
@@ -56,7 +62,9 @@ Trn.prototype._createNext = function () {
 
 test('challengeChain', function *(t) {
   t.equal(Trn.invalid(7), "Challenge can only have a multiple of two players", 'in');
-  var trn = new Trn(8); // by defaults, a 2-stage
+  var errorCalls = 0; // verify that we get 1 error call further down
+  var errorLog = () => { errorCalls += 1; };
+  var trn = new Trn(8, { log: { error: errorLog }}); // by defaults, a 2-stage
   t.ok(trn._inst instanceof Challenge, 'Trn made a Challenge instance');
 
   t.equal(trn.oldMatches.length, 0, "no cached the matches yet");
@@ -111,7 +119,12 @@ test('challengeChain', function *(t) {
 
   t.equal(trn.oldMatches.length, 4+2, 'everything saved here now');
   t.equal(trn.matches.length, 0, 'and nothing left');
+
+  // scoring now would log if we hadn't voided it - verify that it worked
+  t.equal(errorCalls, 0, 'nothing bad yet');
   t.ok(!trn.score({ s:1, r:1, m:1 }, [1,0]), "cannot rescore now");
+  t.equal(errorCalls, 1, 'got error event');
+
   t.deepEqual(trn.oldMatches, [
       // stage 1
       { id: tid(1, 1, 1, 1), p: [1,2], m: [0,1] },
@@ -181,4 +194,13 @@ test('emitter', function *(t) {
 
   var trn2 = Trn.restore(8, {}, trn.state);
   t.deepEqual(trn2.oldMatches, trn.oldMatches, 'restored from state');
+});
+
+test('configure', function *(t) {
+  t.plan(2); // failed scoring + reason
+  var errlog = function (msg) {
+    t.pass('error log called');
+  };
+  var trn = new Trn(8, { log: { error: errlog }});
+  trn.score(trn.matches[0].id, [1,1]);
 });

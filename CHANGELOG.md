@@ -1,3 +1,7 @@
+1.2.0 / 2015-12-15
+==================
+  * Bump tournament for configurable `log` handlers.
+
 1.1.0 / 2014-10-11
 ==================
   * Add `::state` and `.restore` to mimic Tournament API

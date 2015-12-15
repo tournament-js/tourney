@@ -189,7 +189,7 @@ Tourney.prototype.complete = function () {
   this.matches = [];
   this.unscorable = $.constant("cannot score matches after completing a tourney");
   this.score = function () {
-    console.error(this.unscorable());
+    this._opts.log.error(this.unscorable());
     return false;
   };
   this.state.push({ type: 'done' });

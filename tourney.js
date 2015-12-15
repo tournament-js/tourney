@@ -7,12 +7,12 @@ function Id(t, id) {
 }
 
 Id.prototype.toString = function () {
-  return "T" + this.t + " S" + this.s + " R" + this.r + " M" + this.m;
+  return 'T' + this.t + ' S' + this.s + ' R' + this.r + ' M' + this.m;
 };
 
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 // Setup and statics
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 
 function Tourney(np, inst) {
   this._inst = inst;
@@ -79,9 +79,9 @@ Tourney.sub = function (name, init, Initial) {
   return Tournament.sub(name, init, Initial || Tourney);
 };
 
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 // Const proxy getters
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 
 Tourney.prototype.unscorable = function (id, score, allowPast) {
   return this._inst.unscorable(id, score, allowPast);
@@ -99,9 +99,9 @@ Tourney.prototype.findMatches = function (id) {
   return this._inst.findMatches(id);
 };
 
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 // Const getters
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 Tourney.prototype.getName = function (depth) {
   var names = [];
   for (var inst = this._inst; inst ; inst = inst._inst) {
@@ -121,9 +121,9 @@ Tourney.prototype.stageDone = function () {
   return this._inst[this._inst.hasStages ? 'stageDone' : 'isDone']();
 };
 
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 // State modifiers
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 
 Tourney.prototype.score = function (id, score) {
   return this._inst.score(id, score) &&
@@ -145,7 +145,7 @@ var formatCurrent = function (stage, ms) {
 
 Tourney.prototype.createNextStage = function () {
   if (!this.stageDone()) {
-    throw new Error("cannot start next stage until current one is done");
+    throw new Error('cannot start next stage until current one is done');
   }
   if (this.isDone()) {
     return false;
@@ -181,13 +181,13 @@ Tourney.prototype.createNextStage = function () {
 
 Tourney.prototype.complete = function () {
   if (!this.isDone()) {
-    throw new Error("cannot complete a tourney until it is done");
+    throw new Error('cannot complete a tourney until it is done');
   }
   // last oldMatches extend
   var completedMatches = formatCurrent(this._stage, this.matches);
   Array.prototype.push.apply(this.oldMatches, completedMatches);
   this.matches = [];
-  this.unscorable = $.constant("cannot score matches after completing a tourney");
+  this.unscorable = $.constant('cannot score matches after completing a tourney');
   this.score = function () {
     this._opts.log.error(this.unscorable());
     return false;
@@ -195,13 +195,13 @@ Tourney.prototype.complete = function () {
   this.state.push({ type: 'done' });
 };
 
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 // Results
 //
 // If current instance does not report results for all players,
 // we append knocked out players' results from their previous stage.
 // By induction, all players always exist in `results`.
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 
 // NB: same as Tournament.resultEntry but does not throw
 var resultEntry = function (res, p) {
@@ -232,7 +232,7 @@ Tourney.prototype.results = function () {
   }).concat(knockOut);
 };
 
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 
 Tourney.Id = Id;
 module.exports = Tourney;

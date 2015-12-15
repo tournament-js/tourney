@@ -17,7 +17,7 @@ var Challenge = Tournament.sub('Challenge', function (opts, initParent) {
 Challenge.configure({
   invalid: function (np) {
     if (np % 2 !== 0) {
-      return "Challenge can only have a multiple of two players";
+      return 'Challenge can only have a multiple of two players';
     }
     return null;
   }
@@ -45,7 +45,7 @@ var Trn = Tourney.sub('Trn', function (opts, initParent) {
   initParent(new Challenge(this.numPlayers, opts));
 });
 Trn.configure({
-  defaults: function (np, opts){
+  defaults: function (np, opts) {
     opts.stages = (opts.stages | 0) ? (opts.stages | 0): 2;
     return opts;
   },
@@ -61,46 +61,46 @@ Trn.prototype._createNext = function () {
 };
 
 test('challengeChain', function *(t) {
-  t.equal(Trn.invalid(7), "Challenge can only have a multiple of two players", 'in');
+  t.equal(Trn.invalid(7), 'Challenge can only have a multiple of two players', 'in');
   var errorCalls = 0; // verify that we get 1 error call further down
   var errorLog = () => { errorCalls += 1; };
   var trn = new Trn(8, { log: { error: errorLog }}); // by defaults, a 2-stage
   t.ok(trn._inst instanceof Challenge, 'Trn made a Challenge instance');
 
-  t.equal(trn.oldMatches.length, 0, "no cached the matches yet");
-  t.equal(trn.matches.length, 4, "matches");
+  t.equal(trn.oldMatches.length, 0, 'no cached the matches yet');
+  t.equal(trn.matches.length, 4, 'matches');
   t.deepEqual(trn.matches.map($.get('p')),
     [ [1,2], [3,4], [5,6], [7,8] ],
-    "match players contents"
+    'match players contents'
   );
-  t.deepEqual(trn.findMatch({s:1, r:1, m:4}), $.last(trn.matches), 'findMatch');
-  t.deepEqual(trn.findMatches({r:1}), trn.matches, 'findMatches');
+  t.deepEqual(trn.findMatch({s: 1, r: 1, m: 4}), $.last(trn.matches), 'findMatch');
+  t.deepEqual(trn.findMatches({r: 1}), trn.matches, 'findMatches');
 
-  t.ok(!trn.stageDone(), "stage not done - so the next thing will throw");
+  t.ok(!trn.stageDone(), 'stage not done - so the next thing will throw');
   try {
     trn.createNextStage();
   }
   catch (e) {
-    t.equal(e.message, "cannot start next stage until current one is done", 'did');
+    t.equal(e.message, 'cannot start next stage until current one is done', 'did');
   }
 
-  t.deepEqual(trn.players(), $.range(8), "players");
+  t.deepEqual(trn.players(), $.range(8), 'players');
   trn.matches.forEach(function (m) {
     t.ok(trn.score(m.id, [0, 1]), 'score lowest seed winning t1');
   });
 
-  t.ok(trn.stageDone(), "challenge 1 stage complete");
+  t.ok(trn.stageDone(), 'challenge 1 stage complete');
   try {
     trn.complete();
   }
   catch (e) {
-    t.equal(e.message, "cannot complete a tourney until it is done", "duh");
+    t.equal(e.message, 'cannot complete a tourney until it is done', 'duh');
   }
-  t.ok(trn.createNextStage(), "could create next stage");
-  t.ok(!trn.isDone(), "but not yet done");
+  t.ok(trn.createNextStage(), 'could create next stage');
+  t.ok(!trn.isDone(), 'but not yet done');
 
   t.ok(trn._inst instanceof Challenge, 'Trn made another Challenge instance');
-  t.equal(trn.oldMatches.length, 4, "cached the matches from first Challenge");
+  t.equal(trn.oldMatches.length, 4, 'cached the matches from first Challenge');
 
   t.deepEqual(trn.players(), [2,4,6,8], 'winners forwarded');
 
@@ -108,13 +108,13 @@ test('challengeChain', function *(t) {
     t.ok(trn.score(m.id, [0,1]), 'score lowest seed winning t2');
   });
 
-  t.ok(trn.stageDone(), "challenge 2 stage complete");
-  t.ok(!trn.createNextStage(), "could not create any more stages - complete");
+  t.ok(trn.stageDone(), 'challenge 2 stage complete');
+  t.ok(!trn.createNextStage(), 'could not create any more stages - complete');
 
   t.ok(trn.isDone(), 'tourney done');
   var t2m1 = { s: 1, r: 1, m: 1 };
-  t.ok(trn.score(t2m1, [0,2]), "can still rescore without past access");
-  t.equal(trn.unscorable(t2m1, [0, 2]), null, "unscorable is slave to _safe");
+  t.ok(trn.score(t2m1, [0,2]), 'can still rescore without past access');
+  t.equal(trn.unscorable(t2m1, [0, 2]), null, 'unscorable is slave to _safe');
   trn.complete(); // seal it
 
   t.equal(trn.oldMatches.length, 4+2, 'everything saved here now');
@@ -122,19 +122,19 @@ test('challengeChain', function *(t) {
 
   // scoring now would log if we hadn't voided it - verify that it worked
   t.equal(errorCalls, 0, 'nothing bad yet');
-  t.ok(!trn.score({ s:1, r:1, m:1 }, [1,0]), "cannot rescore now");
+  t.ok(!trn.score({ s:1, r:1, m:1 }, [1,0]), 'cannot rescore now');
   t.equal(errorCalls, 1, 'got error event');
 
   t.deepEqual(trn.oldMatches, [
-      // stage 1
-      { id: tid(1, 1, 1, 1), p: [1,2], m: [0,1] },
-      { id: tid(1, 1, 1, 2), p: [3,4], m: [0,1] },
-      { id: tid(1, 1, 1, 3), p: [5,6], m: [0,1] },
-      { id: tid(1, 1, 1, 4), p: [7,8], m: [0,1] },
-      // stage 2
-      { id: tid(2, 1, 1, 1), p: [2,4], m: [0,2] }, // was rescored
-      { id: tid(2, 1, 1, 2), p: [6,8], m: [0,1] }
-    ], 'full match verification'
+    // stage 1
+    { id: tid(1, 1, 1, 1), p: [1,2], m: [0,1] },
+    { id: tid(1, 1, 1, 2), p: [3,4], m: [0,1] },
+    { id: tid(1, 1, 1, 3), p: [5,6], m: [0,1] },
+    { id: tid(1, 1, 1, 4), p: [7,8], m: [0,1] },
+    // stage 2
+    { id: tid(2, 1, 1, 1), p: [2,4], m: [0,2] }, // was rescored
+    { id: tid(2, 1, 1, 2), p: [6,8], m: [0,1] }],
+    'full match verification'
   );
 
   // verify results are sensible
@@ -153,7 +153,7 @@ test('challengeChain', function *(t) {
   // verify that we can chain this into another Tourney
   var from = Trn.from(trn, 2, { stages: 1 }); // explicity specify a 1-stage
   t.deepEqual(from.players(), [4,8], 'forwarded the top 2 from Tourney');
-  t.deepEqual(trn.upcoming(4), trn.matches, "4 is in the final");
+  t.deepEqual(trn.upcoming(4), trn.matches, '4 is in the final');
   t.deepEqual(from.matches[0].p, [4,8], 'and they are in m1');
   t.ok(from.score(from.matches[0].id, [1, 0]), 'score final');
   t.ok(from.isDone(), 'and it is done');
@@ -164,8 +164,8 @@ test('challengeChain', function *(t) {
   t.deepEqual(from.results(), expRes, 'from results verification');
 
   // Ensure Matches in oldMatches are all Tourney style Ids with their own toString
-  t.equal(from.oldMatches.length, 1, "one match in this tourney"); // TODO: copy old?
-  t.equal($.last(from.oldMatches).id + '', "T1 S1 R1 M1", "id relative to this trn");
+  t.equal(from.oldMatches.length, 1, 'one match in this tourney'); // TODO: copy old?
+  t.equal($.last(from.oldMatches).id + '', 'T1 S1 R1 M1', 'id relative to this trn');
 });
 
 test('emitter', function *(t) {
@@ -173,22 +173,21 @@ test('emitter', function *(t) {
   trn.matches.forEach(function (m) {
     t.ok(trn.score(m.id, [0, 1]), 'score t1');
   });
-  t.ok(trn.createNextStage(), "could create next stage");
+  t.ok(trn.createNextStage(), 'could create next stage');
   trn.matches.forEach(function (m) {
     t.ok(trn.score(m.id, [1,0]), 'score t2');
   });
   trn.complete();
 
   t.deepEqual(trn.state, [
-      { type: 'score', id: { s: 1, r: 1, m: 1 }, score: [0,1] },
-      { type: 'score', id: { s: 1, r: 1, m: 2 }, score: [0,1] },
-      { type: 'score', id: { s: 1, r: 1, m: 3 }, score: [0,1] },
-      { type: 'score', id: { s: 1, r: 1, m: 4 }, score: [0,1] },
-      { type: 'next' },
-      { type: 'score', id: { s: 1, r: 1, m: 1 }, score: [1,0] },
-      { type: 'score', id: { s: 1, r: 1, m: 2 }, score: [1,0] },
-      { type: 'done' }
-    ],
+    { type: 'score', id: { s: 1, r: 1, m: 1 }, score: [0,1] },
+    { type: 'score', id: { s: 1, r: 1, m: 2 }, score: [0,1] },
+    { type: 'score', id: { s: 1, r: 1, m: 3 }, score: [0,1] },
+    { type: 'score', id: { s: 1, r: 1, m: 4 }, score: [0,1] },
+    { type: 'next' },
+    { type: 'score', id: { s: 1, r: 1, m: 1 }, score: [1,0] },
+    { type: 'score', id: { s: 1, r: 1, m: 2 }, score: [1,0] },
+    { type: 'done' }],
     'everything captured'
   );
 
@@ -198,7 +197,7 @@ test('emitter', function *(t) {
 
 test('configure', function *(t) {
   t.plan(2); // failed scoring + reason
-  var errlog = function (msg) {
+  var errlog = function () {
     t.pass('error log called');
   };
   var trn = new Trn(8, { log: { error: errlog }});

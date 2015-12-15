@@ -2,7 +2,7 @@
   "name": "tourney",
   "description": "Multi-stage tournaments",
   "author": "Eirik Albrigtsen <analsandblaster@gmail.com>",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "repository": {
     "type": "git",
     "url": "clux/tourney"

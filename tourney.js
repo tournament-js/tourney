@@ -126,8 +126,11 @@ Tourney.prototype.stageDone = function () {
 // ------------------------------------------------------------------
 
 Tourney.prototype.score = function (id, score) {
-  return this._inst.score(id, score) &&
-         this.state.push({ type: 'score', id: id, score: score });
+  var res = this._inst.score(id, score);
+  if (res) {
+    this.state.push({ type: 'score', id: id, score: score });
+  }
+  return res;
 };
 
 var formatCurrent = function (stage, ms) {

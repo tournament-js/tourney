@@ -1,3 +1,7 @@
+1.2.1 / 2015-12-20
+==================
+  * Fixed a bug where `score` could return an unexpected truthy integer rather than a bool
+
 1.2.0 / 2015-12-15
 ==================
   * Bump tournament for configurable `log` handlers.
